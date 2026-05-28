@@ -227,7 +227,7 @@ rotation = Vector3(1.5708, 0, 0)
 mesh = SubResource("13_wheelmesh")
 
 [node name="RiderVisual" type="Node3D" parent="SubViewportContainer/SubViewport/World/Bike"]
-position = Vector3(0, 0.08, -0.36)
+position = Vector3(0, 0, 0)
 script = ExtResource("6_ridervisual")
 
 [node name="EngineAudio" type="AudioStreamPlayer3D" parent="SubViewportContainer/SubViewport/World/Bike"]

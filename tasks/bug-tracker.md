@@ -22,3 +22,6 @@ Tracks issues reported in chat and their fix status.
 
 - [x] Bike floating above ground (ride + garage preview).
   - Fix: lowered bike spawn/reset height in ride scene and corrected garage preview bike pivot height.
+
+- [x] Character still floating + cleanup requested for prior floating/fall fixes.
+  - Fix: replaced rider offset tweaks with bike `SeatAnchor` attachment and simplified chunk streaming to one clean radius-based system (removed layered look-ahead/unload logic).

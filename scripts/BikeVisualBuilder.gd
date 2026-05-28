@@ -56,6 +56,7 @@ func apply_config(config: Resource) -> void:
 	_add_wheel("FrontWheel", front_wheel_z, wheel_radius, tire_width, metal_mat, rubber_mat)
 	_add_seat(frame_height, frame_mat, metal_mat)
 	_add_pedals(metal_mat)
+	_add_seat_anchor(frame_height)
 
 func _add_wheel(name: String, wheel_z: float, wheel_radius: float, tire_width: float, rim_mat: Material, tire_mat: Material) -> void:
 	var tire := MeshInstance3D.new()
@@ -211,3 +212,9 @@ func _set_pedal_phase(phase: float) -> void:
 		(right as Node3D).rotation.z = phase
 	if left and left is Node3D:
 		(left as Node3D).rotation.z = phase + PI
+
+func _add_seat_anchor(frame_height: float) -> void:
+	var anchor := Node3D.new()
+	anchor.name = "SeatAnchor"
+	anchor.position = Vector3(0.0, frame_height + 0.25, -0.47)
+	add_child(anchor)

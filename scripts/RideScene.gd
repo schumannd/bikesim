@@ -48,10 +48,12 @@ func _physics_process(_delta: float) -> void:
 	_pedal_phase += abs((bike as Node).get("speed")) * _delta * 0.9
 	bike_visual.call("animate_drive", (bike as Node).get("speed"), _delta)
 	rider_visual.call("animate_pedaling", _pedal_phase, normalized_speed)
+	_snap_rider_to_seat()
 
 func _apply_visuals() -> void:
 	bike_visual.call("apply_config", GameState.bike_config)
 	rider_visual.call("apply_config", GameState.character_config)
+	_snap_rider_to_seat()
 
 func _on_checkpoint_body_entered(body: Node3D) -> void:
 	if body == bike:
@@ -85,6 +87,11 @@ func _update_minimap_marker() -> void:
 	var x: float = clamp(local_x, 0.0, 1.0)
 	var y: float = clamp(local_y, 0.0, 1.0)
 	minimap_marker.position = Vector2(x * map_size.x - 4.0, y * map_size.y - 4.0)
+
+func _snap_rider_to_seat() -> void:
+	var seat_anchor: Node = bike_visual.get_node_or_null("SeatAnchor")
+	if seat_anchor and seat_anchor is Node3D:
+		rider_visual.position = (seat_anchor as Node3D).position + Vector3(0.0, 0.02, 0.0)
 
 func _connect_existing_garage_zones() -> void:
 	for node in world_root.get_children():
