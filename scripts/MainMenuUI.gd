@@ -236,6 +236,8 @@ func _on_new_game_pressed() -> void:
 		main.show_character_customization("new_game")
 
 func _on_slot_pressed(slot: int) -> void:
+	if slot_buttons[slot].disabled or not SaveSystem.has_slot(slot):
+		return
 	if not GameState.load_slot(slot):
 		return
 	_go_to_ride()

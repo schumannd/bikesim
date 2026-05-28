@@ -69,7 +69,7 @@ func wizard_tower_world_position_for_chunk(chunk_coord: Vector2i) -> Vector3:
 	)
 
 func _ready() -> void:
-	SaveSystem.migrate_legacy_save()
+	SaveSystem.sanitize_slots()
 	reset_to_defaults()
 
 func reset_to_defaults() -> void:
@@ -93,7 +93,6 @@ func start_new_game(slot: int) -> void:
 	active_slot = slot
 	is_new_game_setup = true
 	reset_to_defaults()
-	persist()
 
 func abandon_new_game() -> void:
 	if active_slot >= 0:
@@ -104,7 +103,7 @@ func abandon_new_game() -> void:
 
 func load_slot(slot: int) -> bool:
 	var data: Dictionary = SaveSystem.load_slot(slot)
-	if data.is_empty() or not data.has("bike"):
+	if not SaveSystem.is_playable_save(data):
 		return false
 	active_slot = slot
 	is_new_game_setup = false
@@ -160,6 +159,7 @@ func persist() -> void:
 	if active_slot < 0:
 		return
 	SaveSystem.save_slot(active_slot, {
+		"ready": not is_new_game_setup,
 		"bike": bike_config.to_dict(),
 		"character": character_config.to_dict(),
 		"world_seed": world_seed,
