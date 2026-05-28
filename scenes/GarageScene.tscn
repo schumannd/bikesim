@@ -1,0 +1,50 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/GarageUI.gd" id="1_garage"]
+
+[node name="GarageScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_garage")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -180.0
+offset_right = 220.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="MarginContainer/VBoxContainer"]
+text = "Garage: Pimp Your Bike"
+
+[node name="FrameOption" type="OptionButton" parent="MarginContainer/VBoxContainer"]
+
+[node name="WheelOption" type="OptionButton" parent="MarginContainer/VBoxContainer"]
+
+[node name="HandlebarOption" type="OptionButton" parent="MarginContainer/VBoxContainer"]
+
+[node name="PaintColor" type="ColorPickerButton" parent="MarginContainer/VBoxContainer"]
+text = "Paint Color"
+
+[node name="SaveButton" type="Button" parent="MarginContainer/VBoxContainer"]
+text = "Save and Ride"
+
+[node name="CancelButton" type="Button" parent="MarginContainer/VBoxContainer"]
+text = "Cancel"
+
+[connection signal="pressed" from="MarginContainer/VBoxContainer/SaveButton" to="." method="_on_save_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/CancelButton" to="." method="_on_cancel_pressed"]

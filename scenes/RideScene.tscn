@@ -1,0 +1,174 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scripts/RideScene.gd" id="1_ride"]
+[ext_resource type="Script" path="res://scripts/BikeController.gd" id="2_bike"]
+[ext_resource type="Script" path="res://scripts/CameraFollow.gd" id="3_cam"]
+
+[sub_resource type="BoxMesh" id="1_groundmesh"]
+size = Vector3(200, 1, 200)
+
+[sub_resource type="BoxShape3D" id="2_groundshape"]
+size = Vector3(200, 1, 200)
+
+[sub_resource type="CylinderMesh" id="3_bikemesh"]
+top_radius = 0.35
+bottom_radius = 0.35
+height = 1.8
+
+[sub_resource type="CapsuleShape3D" id="4_bikeshape"]
+radius = 0.45
+height = 1.2
+
+[sub_resource type="CapsuleMesh" id="5_ridermesh"]
+radius = 0.3
+mid_height = 1.0
+
+[sub_resource type="SphereShape3D" id="6_checkpointshape"]
+radius = 1.5
+
+[sub_resource type="BoxMesh" id="7_roadmesh"]
+size = Vector3(12, 0.1, 120)
+
+[sub_resource type="BoxShape3D" id="8_roadshape"]
+size = Vector3(12, 0.1, 120)
+
+[sub_resource type="BoxMesh" id="9_offroadmesh"]
+size = Vector3(35, 0.2, 35)
+
+[sub_resource type="AudioStreamGenerator" id="10_enginehum"]
+mix_rate = 44100.0
+buffer_length = 0.25
+
+[sub_resource type="StandardMaterial3D" id="11_roadmat"]
+albedo_color = Color(0.12, 0.12, 0.13, 1)
+roughness = 0.95
+
+[sub_resource type="StandardMaterial3D" id="12_offroadmat"]
+albedo_color = Color(0.34, 0.28, 0.2, 1)
+roughness = 1.0
+
+[node name="RideScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ride")
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
+size = Vector2i(1600, 900)
+handle_input_locally = false
+
+[node name="World" type="Node3D" parent="SubViewportContainer/SubViewport"]
+
+[node name="Sun" type="DirectionalLight3D" parent="SubViewportContainer/SubViewport/World"]
+rotation = Vector3(-0.785398, 0, 0)
+light_energy = 1.2
+
+[node name="Ground" type="StaticBody3D" parent="SubViewportContainer/SubViewport/World"]
+
+[node name="GroundMesh" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Ground"]
+mesh = SubResource("1_groundmesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SubViewportContainer/SubViewport/World/Ground"]
+shape = SubResource("2_groundshape")
+
+[node name="Road" type="StaticBody3D" parent="SubViewportContainer/SubViewport/World"]
+position = Vector3(0, 0.6, 0)
+
+[node name="RoadMesh" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Road"]
+mesh = SubResource("7_roadmesh")
+material_override = SubResource("11_roadmat")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SubViewportContainer/SubViewport/World/Road"]
+shape = SubResource("8_roadshape")
+
+[node name="OffroadPatch" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World"]
+position = Vector3(-24, 0.61, 22)
+mesh = SubResource("9_offroadmesh")
+material_override = SubResource("12_offroadmat")
+
+[node name="Bike" type="CharacterBody3D" parent="SubViewportContainer/SubViewport/World"]
+position = Vector3(0, 1.2, 0)
+script = ExtResource("2_bike")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SubViewportContainer/SubViewport/World/Bike"]
+shape = SubResource("4_bikeshape")
+
+[node name="BikeMesh" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Bike"]
+rotation = Vector3(1.5708, 0, 0)
+mesh = SubResource("3_bikemesh")
+
+[node name="RiderMesh" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Bike"]
+position = Vector3(0, 1.1, 0.2)
+mesh = SubResource("5_ridermesh")
+
+[node name="EngineAudio" type="AudioStreamPlayer3D" parent="SubViewportContainer/SubViewport/World/Bike"]
+stream = SubResource("10_enginehum")
+autoplay = true
+unit_size = 8.0
+max_db = -3.0
+attenuation_model = 0
+
+[node name="Camera3D" type="Camera3D" parent="SubViewportContainer/SubViewport/World"]
+position = Vector3(0, 4, 8)
+current = true
+script = ExtResource("3_cam")
+target_path = NodePath("../Bike")
+
+[node name="CheckpointA" type="Area3D" parent="SubViewportContainer/SubViewport/World"]
+position = Vector3(24, 1, -10)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SubViewportContainer/SubViewport/World/CheckpointA"]
+shape = SubResource("6_checkpointshape")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="MarginContainer" type="MarginContainer" parent="HUD"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 440.0
+offset_bottom = 180.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HUD/MarginContainer"]
+
+[node name="SpeedLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
+text = "Speed: 0 km/h"
+
+[node name="HintLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
+text = "..."
+
+[node name="MissionLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
+text = "Tutorial: ..."
+
+[node name="CheckpointLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
+text = "Checkpoint: ..."
+
+[node name="MinimapPanel" type="Panel" parent="HUD"]
+offset_left = 20.0
+offset_top = 760.0
+offset_right = 150.0
+offset_bottom = 890.0
+
+[node name="MapBackground" type="ColorRect" parent="HUD/MinimapPanel"]
+offset_left = 5.0
+offset_top = 5.0
+offset_right = 125.0
+offset_bottom = 125.0
+color = Color(0.08, 0.1, 0.11, 0.85)
+
+[node name="Marker" type="ColorRect" parent="HUD/MinimapPanel"]
+offset_left = 55.0
+offset_top = 55.0
+offset_right = 63.0
+offset_bottom = 63.0
+color = Color(0.9, 0.3, 0.2, 1)
