@@ -240,10 +240,14 @@ max_db = -3.0
 attenuation_model = 0
 
 [node name="Camera3D" type="Camera3D" parent="SubViewportContainer/SubViewport/World"]
-position = Vector3(0, 4, 8)
+position = Vector3(0, 2.2, 4.5)
+fov = 68.0
 current = true
 script = ExtResource("3_cam")
 target_path = NodePath("../Bike")
+follow_distance = 3.8
+follow_height = 2.0
+look_at_height = 1.15
 
 [node name="CheckpointA" type="Area3D" parent="SubViewportContainer/SubViewport/World"]
 position = Vector3(24, 0, -10)
