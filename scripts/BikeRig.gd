@@ -7,6 +7,16 @@ const RIDER_PELVIS_LOCAL := Vector3(0.0, 0.73, 0.04)
 const RIDE_SURFACE_Y := 0.0
 const GARAGE_FLOOR_Y := 0.0
 const FALL_RESET_Y := -8.0
+const GARAGE_BUILDING_POSITION := Vector3(-18.0, 0.0, -16.0)
+
+## World position outside the garage door (rideable road, facing toward the open world).
+static func garage_exit_spawn() -> Vector3:
+	return ride_spawn_position(Vector3(-10.0, 0.0, 2.0))
+
+static func garage_exit_yaw() -> float:
+	var exit_pos := garage_exit_spawn()
+	var toward_world := Vector3.ZERO - exit_pos
+	return atan2(toward_world.x, toward_world.z)
 
 static func ride_spawn_position(xz: Vector3 = Vector3.ZERO) -> Vector3:
 	return Vector3(xz.x, RIDE_SURFACE_Y, xz.z)

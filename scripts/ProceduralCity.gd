@@ -177,7 +177,7 @@ func _add_garage(parent: Node3D) -> void:
 	var wall_mat := _garage_material(Color(1.0, 0.55, 0.08, 1.0), 0.35)
 	var trim_mat := _garage_material(Color(1.0, 0.95, 0.2, 1.0), 1.0)
 	var interior_mat := _garage_material(Color(0.15, 0.35, 0.9, 1.0), 0.8)
-	var pad_mat := _garage_material(Color(0.55, 0.56, 0.58, 1.0), 0.9)
+	var pad_mat := _garage_material(Color(1.0, 0.95, 0.2, 1.0), 1.2)
 
 	var width := 14.0
 	var depth := 10.0
@@ -186,7 +186,7 @@ func _add_garage(parent: Node3D) -> void:
 	var door_w := 5.2
 	var door_h := 4.2
 
-	_add_garage_box(garage, "ApproachPad", Vector3(0.0, 0.03, 7.2), Vector3(door_w + 2.4, 0.06, 5.0), pad_mat, true)
+	_add_garage_box(garage, "ApproachPad", Vector3(0.0, 0.03, 7.2), Vector3(door_w + 2.4, 0.06, 5.0), pad_mat, false)
 	_add_garage_box(garage, "Floor", Vector3(0.0, 0.08, 0.0), Vector3(width, 0.16, depth), pad_mat, true)
 	_add_garage_box(garage, "BackWall", Vector3(0.0, height * 0.5, -depth * 0.5 + wall_t * 0.5), Vector3(width, height, wall_t), wall_mat, true)
 	_add_garage_box(garage, "LeftWall", Vector3(-width * 0.5 + wall_t * 0.5, height * 0.5, 0.0), Vector3(wall_t, height, depth), wall_mat, true)
@@ -200,7 +200,7 @@ func _add_garage(parent: Node3D) -> void:
 	_add_garage_box(garage, "DoorInterior", Vector3(0.0, door_h * 0.5, depth * 0.5 - 1.2), Vector3(door_w - 0.4, door_h - 0.2, 1.6), interior_mat, false)
 	_add_garage_box(garage, "DoorFrameL", Vector3(-door_w * 0.5 - 0.12, door_h * 0.5, depth * 0.5 + 0.1), Vector3(0.2, door_h, 0.25), trim_mat, false)
 	_add_garage_box(garage, "DoorFrameR", Vector3(door_w * 0.5 + 0.12, door_h * 0.5, depth * 0.5 + 0.1), Vector3(0.2, door_h, 0.25), trim_mat, false)
-	_add_garage_box(garage, "DoorRamp", Vector3(0.0, 0.12, depth * 0.5 + 2.0), Vector3(door_w, 0.24, 2.8), trim_mat, true)
+	_add_garage_box(garage, "DoorRamp", Vector3(0.0, 0.12, depth * 0.5 + 2.0), Vector3(door_w, 0.24, 2.8), trim_mat, false)
 
 	var sign := MeshInstance3D.new()
 	sign.name = "GarageSign"
@@ -221,12 +221,13 @@ func _add_garage(parent: Node3D) -> void:
 
 	var zone := Area3D.new()
 	zone.name = "GarageEntranceZone"
-	zone.position = Vector3(0.0, 1.2, depth * 0.5 + 3.2)
+	zone.monitoring = true
+	zone.position = Vector3(0.0, 2.0, depth * 0.5 + 5.5)
 	zone.set_meta("is_garage_zone", true)
 	garage.add_child(zone)
 	var zone_shape_node := CollisionShape3D.new()
 	var zone_shape := BoxShape3D.new()
-	zone_shape.size = Vector3(door_w + 1.0, 3.0, 4.0)
+	zone_shape.size = Vector3(door_w + 6.0, 5.0, 12.0)
 	zone_shape_node.shape = zone_shape
 	zone.add_child(zone_shape_node)
 	garage_zone_created.emit(zone)

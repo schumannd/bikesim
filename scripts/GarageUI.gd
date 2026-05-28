@@ -15,6 +15,8 @@ const BIKE_SHOWROOM_X := 3.2
 @onready var selection_label: Label = $MenuPanel/Margin/VBox/DetailBox/SelectionLabel
 @onready var value_label: Label = $MenuPanel/Margin/VBox/DetailBox/ValueLabel
 @onready var hint_label: Label = $MenuPanel/Margin/VBox/DetailBox/HintLabel
+@onready var leave_garage_button: Button = $MenuPanel/Margin/VBox/LeaveGarageButton
+@onready var cancel_button: Button = $MenuPanel/Margin/VBox/ButtonRow/CancelButton
 @onready var viewport_container: SubViewportContainer = $ViewportPanel/SubViewportContainer
 
 var _preview_config: Dictionary = {}
@@ -97,6 +99,7 @@ var _paint_finish_indices: Dictionary = {
 
 func _ready() -> void:
 	_style_panels()
+	_style_leave_button()
 	for paint_category: String in ["paint_frame", "paint_fork", "paint_rim", "paint_handlebar", "paint_seat"]:
 		_part_options[paint_category] = BikePaintLibraryScript.color_presets()
 	_build_menu()
@@ -115,6 +118,27 @@ func _style_panels() -> void:
 	var viewport_style := StyleBoxFlat.new()
 	viewport_style.bg_color = Color(0.05, 0.06, 0.07, 1.0)
 	$ViewportPanel.add_theme_stylebox_override("panel", viewport_style)
+
+func _style_leave_button() -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(1.0, 0.52, 0.08, 1.0)
+	normal.corner_radius_top_left = 6
+	normal.corner_radius_top_right = 6
+	normal.corner_radius_bottom_left = 6
+	normal.corner_radius_bottom_right = 6
+	normal.content_margin_left = 16.0
+	normal.content_margin_right = 16.0
+	normal.content_margin_top = 12.0
+	normal.content_margin_bottom = 12.0
+	var hover := normal.duplicate()
+	hover.bg_color = Color(1.0, 0.62, 0.18, 1.0)
+	leave_garage_button.add_theme_stylebox_override("normal", normal)
+	leave_garage_button.add_theme_stylebox_override("hover", hover)
+	leave_garage_button.add_theme_stylebox_override("pressed", hover)
+	leave_garage_button.add_theme_color_override("font_color", Color(0.05, 0.05, 0.06, 1.0))
+	leave_garage_button.add_theme_color_override("font_hover_color", Color(0.05, 0.05, 0.06, 1.0))
+	leave_garage_button.add_theme_color_override("font_pressed_color", Color(0.05, 0.05, 0.06, 1.0))
+	leave_garage_button.add_theme_font_size_override("font_size", 26)
 
 func _on_resized() -> void:
 	if viewport_container:
@@ -171,7 +195,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if _is_paint_category(category):
 				_step_paint_color(category, 1)
 		KEY_ENTER, KEY_KP_ENTER:
-			_on_save_pressed()
+			_on_leave_garage_pressed()
 		KEY_ESCAPE:
 			_on_cancel_pressed()
 
@@ -225,7 +249,17 @@ func _step_option(direction: int) -> void:
 	_apply_preview()
 	_update_ui()
 
+func _on_leave_garage_pressed() -> void:
+	_commit_preview_to_game_state()
+	_exit_to_ride()
+
 func _on_save_pressed() -> void:
+	_on_leave_garage_pressed()
+
+func _on_cancel_pressed() -> void:
+	_exit_to_ride()
+
+func _commit_preview_to_game_state() -> void:
 	var cfg: Resource = GameState.bike_config
 	cfg.frame_id = _preview_config["frame_id"]
 	cfg.wheel_id = _preview_config["wheel_id"]
@@ -245,11 +279,9 @@ func _on_save_pressed() -> void:
 	cfg.seat_paint_finish = _preview_config["seat_paint_finish"]
 	cfg.sync_legacy_paint_color()
 	GameState.persist()
-	var main: Node = get_tree().current_scene
-	if main and main.has_method("show_ride_scene"):
-		main.show_ride_scene()
 
-func _on_cancel_pressed() -> void:
+func _exit_to_ride() -> void:
+	GameState.queue_garage_exit()
 	var main: Node = get_tree().current_scene
 	if main and main.has_method("show_ride_scene"):
 		main.show_ride_scene()
@@ -318,12 +350,12 @@ func _update_ui() -> void:
 		var color_label: String = color_options[color_idx]["label"]
 		var finish_label: String = BikePaintLibraryScript.finishes()[finish_idx]["label"]
 		value_label.text = "%s  ·  %s" % [color_label, finish_label]
-		hint_label.text = "↑↓ part   Q/E color   ←→ texture   Enter save   Esc cancel"
+		hint_label.text = "↑↓ part   Q/E color   ←→ texture   Enter leave   Esc discard"
 	else:
 		var options: Array = _part_options[category]
 		var idx: int = int(_selection_indices[category])
 		value_label.text = options[idx]["label"]
-		hint_label.text = "↑↓ part   ←→ option   Enter save   Esc cancel"
+		hint_label.text = "↑↓ part   ←→ option   Enter leave   Esc discard"
 
 func _refresh_menu_highlight() -> void:
 	for i in range(_menu_rows.size()):

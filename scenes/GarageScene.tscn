@@ -88,21 +88,22 @@ theme_override_font_sizes/font_size = 14
 text = "↑↓ select part  ←→ change option"
 autowrap_mode = 3
 
+[node name="LeaveGarageButton" type="Button" parent="MenuPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 58)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "LEAVE GARAGE"
+
 [node name="ButtonRow" type="HBoxContainer" parent="MenuPanel/Margin/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="SaveButton" type="Button" parent="MenuPanel/Margin/VBox/ButtonRow"]
-custom_minimum_size = Vector2(140, 44)
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
-text = "Save & Ride"
-
 [node name="CancelButton" type="Button" parent="MenuPanel/Margin/VBox/ButtonRow"]
-custom_minimum_size = Vector2(120, 44)
+custom_minimum_size = Vector2(120, 36)
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
-text = "Cancel"
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 15
+text = "Discard changes"
 
 [node name="ViewportPanel" type="Panel" parent="."]
 layout_mode = 1
@@ -180,5 +181,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.2, 0.95, 0.15)
 fov = 36.0
 current = true
 
-[connection signal="pressed" from="MenuPanel/Margin/VBox/ButtonRow/SaveButton" to="." method="_on_save_pressed"]
+[connection signal="pressed" from="MenuPanel/Margin/VBox/LeaveGarageButton" to="." method="_on_leave_garage_pressed"]
 [connection signal="pressed" from="MenuPanel/Margin/VBox/ButtonRow/CancelButton" to="." method="_on_cancel_pressed"]

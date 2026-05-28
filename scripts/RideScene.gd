@@ -17,12 +17,12 @@ const BikeRigScript := preload("res://scripts/BikeRig.gd")
 
 var spawn_position: Vector3 = BikeRigScript.ride_spawn_position()
 var mission_step: int = 0
-var _garage_zone_active: bool = false
 var _pedal_phase: float = 0.0
 var _garage_world_pos: Vector3 = Vector3(-18.0, 0.0, -7.8)
+var _garage_auto_enter_block_until: float = 0.0
 
 func _ready() -> void:
-	hint_label.text = "Follow orange on minimap — ride into the open garage door and press G | C: Character | R: Reset"
+	hint_label.text = "Ride to the orange garage to enter automatically — or press G anywhere | C: Character | R: Reset"
 	_update_mission_text()
 	checkpoint_label.text = "Checkpoint: not reached"
 	_apply_visuals()
@@ -37,11 +37,8 @@ func _process(_delta: float) -> void:
 	speed_label.text = "Speed: %d km/h" % max(kmh, 0)
 	if minimap.has_method("update_for_player"):
 		minimap.call("update_for_player", bike.global_position)
-	if Input.is_action_just_pressed("open_garage") and _garage_zone_active:
-		_complete_mission_step(0)
-		get_tree().root.get_node("Main").show_garage()
-	elif Input.is_action_just_pressed("open_garage"):
-		checkpoint_label.text = "Garage locked: go to garage entrance"
+	if Input.is_action_just_pressed("open_garage"):
+		_enter_garage()
 	if Input.is_action_just_pressed("open_character_customization"):
 		_complete_mission_step(1)
 		get_tree().root.get_node("Main").show_character_customization()
@@ -64,6 +61,18 @@ func _apply_visuals() -> void:
 	bike_collision.position.y = BikeRigScript.collision_shape_y(wheel_radius)
 	spawn_position = BikeRigScript.ride_spawn_position(spawn_position)
 	bike.call("set_reset_position", spawn_position)
+	_apply_garage_exit_spawn_if_pending()
+
+func _apply_garage_exit_spawn_if_pending() -> void:
+	var exit_pos: Vector3 = GameState.consume_garage_exit_spawn()
+	if exit_pos == Vector3.INF:
+		return
+	bike.global_position = BikeRigScript.ride_spawn_position(exit_pos)
+	bike.rotation.y = BikeRigScript.garage_exit_yaw()
+	spawn_position = bike.global_position
+	bike.call("set_reset_position", spawn_position)
+	_garage_auto_enter_block_until = Time.get_ticks_msec() / 1000.0 + 2.5
+	_refresh_minimap_pois()
 
 func _on_checkpoint_body_entered(body: Node3D) -> void:
 	if body == bike:
@@ -75,7 +84,7 @@ func _on_checkpoint_body_entered(body: Node3D) -> void:
 func _update_mission_text() -> void:
 	match mission_step:
 		0:
-			mission_label.text = "Tutorial: Open the garage (G)."
+			mission_label.text = "Tutorial: Enter the garage (ride in or press G)."
 		1:
 			mission_label.text = "Tutorial: Open character customization (C)."
 		2:
@@ -129,15 +138,12 @@ func _on_garage_zone_created(zone: Area3D) -> void:
 	_refresh_minimap_pois()
 	if not zone.body_entered.is_connected(_on_garage_zone_body_entered):
 		zone.body_entered.connect(_on_garage_zone_body_entered)
-	if not zone.body_exited.is_connected(_on_garage_zone_body_exited):
-		zone.body_exited.connect(_on_garage_zone_body_exited)
-
 func _on_garage_zone_body_entered(body: Node3D) -> void:
 	if body == bike:
-		_garage_zone_active = true
-		checkpoint_label.text = "Garage entrance: press G"
+		_enter_garage()
 
-func _on_garage_zone_body_exited(body: Node3D) -> void:
-	if body == bike:
-		_garage_zone_active = false
-		checkpoint_label.text = "Checkpoint: not reached"
+func _enter_garage() -> void:
+	if Time.get_ticks_msec() / 1000.0 < _garage_auto_enter_block_until:
+		return
+	_complete_mission_step(0)
+	get_tree().root.get_node("Main").show_garage()
