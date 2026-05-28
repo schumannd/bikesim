@@ -10,12 +10,23 @@ const GARAGE_LOT_MIN := Vector3(-40.0, 0.0, -40.0)
 const GARAGE_LOT_MAX := Vector3(-6.0, 0.0, -4.0)
 const GARAGE_POSITION := Vector3(-18.0, 0.0, -16.0)
 
+# Layered heights prevent coplanar ground/road z-fighting (ride surface stays at y=0).
+const TERRAIN_TOP_Y := -0.25
+const TERRAIN_THICKNESS := 0.5
+const ROAD_TOP_Y := 0.0
+const ROAD_THICKNESS := 0.15
+const ROAD_WIDTH := 16.0
+
 var _loaded_chunks: Dictionary = {}
 var _bike: Node3D
+var _terrain_visual: MeshInstance3D
+var _road_material: StandardMaterial3D
+var _terrain_material: StandardMaterial3D
 
 func _ready() -> void:
 	_bike = get_node_or_null(bike_path)
 	_clear_legacy_static_layout()
+	_setup_global_terrain_visual()
 	if not _loaded_chunks.has("0:0"):
 		_create_chunk(Vector2i.ZERO, "0:0")
 	_refresh_chunks(true)
@@ -28,6 +39,7 @@ func _refresh_chunks(force: bool) -> void:
 		_bike = get_node_or_null(bike_path)
 	if _bike == null:
 		return
+	_sync_global_terrain_position()
 	var center_chunk: Vector2i = _world_to_chunk(_bike.global_position)
 	var target_keys: Dictionary = {}
 	for x in range(center_chunk.x - load_radius, center_chunk.x + load_radius + 1):
@@ -59,51 +71,98 @@ func _create_chunk(chunk_coord: Vector2i, key: String) -> void:
 		_add_garage(chunk_node)
 	_add_city_blocks(chunk_node, chunk_coord)
 
+func _setup_global_terrain_visual() -> void:
+	if _terrain_visual != null:
+		return
+	_terrain_material = StandardMaterial3D.new()
+	_terrain_material.albedo_color = Color(0.18, 0.19, 0.2, 1.0)
+	_terrain_material.roughness = 1.0
+	_road_material = StandardMaterial3D.new()
+	_road_material.albedo_color = Color(0.1, 0.1, 0.12, 1.0)
+	_road_material.roughness = 0.95
+
+	_terrain_visual = MeshInstance3D.new()
+	_terrain_visual.name = "GlobalTerrain"
+	var terrain_mesh := BoxMesh.new()
+	var span := chunk_size * float(load_radius * 2 + 3)
+	terrain_mesh.size = Vector3(span, TERRAIN_THICKNESS, span)
+	_terrain_visual.mesh = terrain_mesh
+	_terrain_visual.position = Vector3(
+		0.0,
+		TERRAIN_TOP_Y - TERRAIN_THICKNESS * 0.5,
+		0.0
+	)
+	_terrain_visual.material_override = _terrain_material
+	add_child(_terrain_visual)
+
+func _sync_global_terrain_position() -> void:
+	if _terrain_visual == null or _bike == null:
+		return
+	var center_chunk := _world_to_chunk(_bike.global_position)
+	_terrain_visual.position = Vector3(
+		center_chunk.x * chunk_size,
+		TERRAIN_TOP_Y - TERRAIN_THICKNESS * 0.5,
+		center_chunk.y * chunk_size
+	)
+
 func _add_ground(parent: Node3D) -> void:
+	# Collision only — one global terrain mesh avoids chunk-seam z-fighting.
 	var ground_body := StaticBody3D.new()
-	ground_body.position = Vector3(0.0, -0.5, 0.0)
+	ground_body.position = Vector3(0.0, TERRAIN_TOP_Y - 0.5, 0.0)
 	parent.add_child(ground_body)
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
 	box.size = Vector3(chunk_size, 1.0, chunk_size)
 	shape.shape = box
 	ground_body.add_child(shape)
-	var mesh := MeshInstance3D.new()
-	var ground_mesh := BoxMesh.new()
-	ground_mesh.size = Vector3(chunk_size, 1.0, chunk_size)
-	mesh.mesh = ground_mesh
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.18, 0.19, 0.2, 1.0)
-	mat.roughness = 1.0
-	mesh.material_override = mat
-	ground_body.add_child(mesh)
 
 func _add_roads(parent: Node3D) -> void:
-	_add_road(parent, Vector3.ZERO, false)
-	_add_road(parent, Vector3.ZERO, true)
+	var road_body := StaticBody3D.new()
+	road_body.name = "RoadNetwork"
+	road_body.position = Vector3(0.0, ROAD_TOP_Y - ROAD_THICKNESS * 0.5, 0.0)
+	parent.add_child(road_body)
 
-func _add_road(parent: Node3D, pos: Vector3, rotated: bool) -> void:
-	var road := StaticBody3D.new()
-	road.position = pos + Vector3(0.0, -0.05, 0.0)
-	if rotated:
-		road.rotation.y = PI * 0.5
-	parent.add_child(road)
+	var half_chunk := chunk_size * 0.5
+	var half_road := ROAD_WIDTH * 0.5
+	var arm_length := half_chunk - half_road
+
+	_add_road_segment(road_body, Vector3.ZERO, Vector3(ROAD_WIDTH, ROAD_THICKNESS, ROAD_WIDTH))
+	_add_road_segment(
+		road_body,
+		Vector3(0.0, 0.0, half_road + arm_length * 0.5),
+		Vector3(ROAD_WIDTH, ROAD_THICKNESS, arm_length)
+	)
+	_add_road_segment(
+		road_body,
+		Vector3(0.0, 0.0, -(half_road + arm_length * 0.5)),
+		Vector3(ROAD_WIDTH, ROAD_THICKNESS, arm_length)
+	)
+	_add_road_segment(
+		road_body,
+		Vector3(half_road + arm_length * 0.5, 0.0, 0.0),
+		Vector3(arm_length, ROAD_THICKNESS, ROAD_WIDTH)
+	)
+	_add_road_segment(
+		road_body,
+		Vector3(-(half_road + arm_length * 0.5), 0.0, 0.0),
+		Vector3(arm_length, ROAD_THICKNESS, ROAD_WIDTH)
+	)
+
+func _add_road_segment(road_body: StaticBody3D, pos: Vector3, size: Vector3) -> void:
+	var mesh_inst := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	mesh_inst.mesh = mesh
+	mesh_inst.position = pos
+	mesh_inst.material_override = _road_material
+	road_body.add_child(mesh_inst)
 
 	var road_shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
-	box.size = Vector3(16.0, 0.1, chunk_size)
+	box.size = size
 	road_shape.shape = box
-	road.add_child(road_shape)
-
-	var road_mesh := MeshInstance3D.new()
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3(16.0, 0.1, chunk_size)
-	road_mesh.mesh = mesh
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.1, 0.1, 0.12, 1.0)
-	mat.roughness = 0.95
-	road_mesh.material_override = mat
-	road.add_child(road_mesh)
+	road_shape.position = pos
+	road_body.add_child(road_shape)
 
 func _add_city_blocks(parent: Node3D, chunk_coord: Vector2i) -> void:
 	var rng := RandomNumberGenerator.new()
