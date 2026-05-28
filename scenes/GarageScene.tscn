@@ -30,8 +30,101 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_garage")
 
-[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
-layout_mode = 3
+[node name="MenuPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 0.42
+anchor_bottom = 1.0
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="MenuPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 28
+
+[node name="VBox" type="VBoxContainer" parent="MenuPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="MenuPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+text = "GARAGE"
+
+[node name="Subtitle" type="Label" parent="MenuPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Customize your bike"
+
+[node name="MenuList" type="VBoxContainer" parent="MenuPanel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="DetailBox" type="VBoxContainer" parent="MenuPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SelectionLabel" type="Label" parent="MenuPanel/Margin/VBox/DetailBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Frame"
+
+[node name="ValueLabel" type="Label" parent="MenuPanel/Margin/VBox/DetailBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Trail Frame"
+
+[node name="HintLabel" type="Label" parent="MenuPanel/Margin/VBox/DetailBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "↑↓ select part  ←→ change option"
+autowrap_mode = 3
+
+[node name="ButtonRow" type="HBoxContainer" parent="MenuPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SaveButton" type="Button" parent="MenuPanel/Margin/VBox/ButtonRow"]
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Save & Ride"
+
+[node name="CancelButton" type="Button" parent="MenuPanel/Margin/VBox/ButtonRow"]
+custom_minimum_size = Vector2(120, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Cancel"
+
+[node name="ViewportPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.42
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ViewportBackdrop" type="ColorRect" parent="ViewportPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.06, 0.07, 0.08, 1)
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="ViewportPanel"]
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -39,109 +132,53 @@ grow_horizontal = 2
 grow_vertical = 2
 stretch = true
 
-[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
-size = Vector2i(1600, 900)
+[node name="SubViewport" type="SubViewport" parent="ViewportPanel/SubViewportContainer"]
 handle_input_locally = false
+size = Vector2i(960, 900)
+render_target_update_mode = 4
 
-[node name="World" type="Node3D" parent="SubViewportContainer/SubViewport"]
+[node name="World" type="Node3D" parent="ViewportPanel/SubViewportContainer/SubViewport"]
 script = ExtResource("3_room")
 
-[node name="Sun" type="DirectionalLight3D" parent="SubViewportContainer/SubViewport/World"]
-rotation = Vector3(-0.68, -0.4, 0)
-light_energy = 1.3
+[node name="Sun" type="DirectionalLight3D" parent="ViewportPanel/SubViewportContainer/SubViewport/World"]
+rotation = Vector3(-0.55, 0.35, 0)
+light_energy = 1.25
 
-[node name="FillLight" type="OmniLight3D" parent="SubViewportContainer/SubViewport/World"]
-position = Vector3(2.5, 2.0, 2.5)
-light_energy = 0.8
+[node name="FillLight" type="OmniLight3D" parent="ViewportPanel/SubViewportContainer/SubViewport/World"]
+position = Vector3(1.5, 2.5, 2.0)
+light_energy = 0.65
 
-[node name="KeyLight" type="SpotLight3D" parent="SubViewportContainer/SubViewport/World"]
-position = Vector3(-1.5, 3.2, 2.8)
-rotation = Vector3(-0.9, -0.35, 0)
-light_energy = 1.6
-spot_range = 12.0
+[node name="KeyLight" type="SpotLight3D" parent="ViewportPanel/SubViewportContainer/SubViewport/World"]
+position = Vector3(-2.0, 3.5, 1.0)
+rotation = Vector3(-1.1, -0.2, 0)
+light_energy = 1.8
+spot_range = 14.0
 
-[node name="StandBase" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World"]
-position = Vector3(0, 0.15, 0)
+[node name="StandBase" type="MeshInstance3D" parent="ViewportPanel/SubViewportContainer/SubViewport/World"]
+position = Vector3(3.2, 0.15, 0)
 mesh = SubResource("1_standbase")
 material_override = SubResource("4_standmat")
 
-[node name="StandPole" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World"]
-position = Vector3(0, 0.75, -0.2)
+[node name="StandPole" type="MeshInstance3D" parent="ViewportPanel/SubViewportContainer/SubViewport/World"]
+position = Vector3(3.2, 0.75, -0.2)
 mesh = SubResource("2_standpole")
 material_override = SubResource("4_standmat")
 
-[node name="StandArm" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World"]
-position = Vector3(0, 1.28, 0.18)
+[node name="StandArm" type="MeshInstance3D" parent="ViewportPanel/SubViewportContainer/SubViewport/World"]
+position = Vector3(3.2, 1.28, 0.18)
 mesh = SubResource("3_standarm")
 material_override = SubResource("4_standmat")
 
-[node name="BikePivot" type="Node3D" parent="SubViewportContainer/SubViewport/World"]
-position = Vector3(0, 0, 0)
+[node name="BikePivot" type="Node3D" parent="ViewportPanel/SubViewportContainer/SubViewport/World"]
+position = Vector3(3.2, 0, 0)
 
-[node name="BikeVisual" type="Node3D" parent="SubViewportContainer/SubViewport/World/BikePivot"]
+[node name="BikeVisual" type="Node3D" parent="ViewportPanel/SubViewportContainer/SubViewport/World/BikePivot"]
 script = ExtResource("2_bikevisual")
 
-[node name="CameraRig" type="Node3D" parent="SubViewportContainer/SubViewport/World"]
-position = Vector3(0, 0.9, 0)
-
-[node name="Camera3D" type="Camera3D" parent="SubViewportContainer/SubViewport/World/CameraRig"]
-position = Vector3(0, 0.15, 2.35)
+[node name="Camera3D" type="Camera3D" parent="ViewportPanel/SubViewportContainer/SubViewport/World"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.2, 0.95, 0.15)
+fov = 36.0
 current = true
-fov = 48.0
 
-[node name="Overlay" type="CanvasLayer" parent="."]
-
-[node name="Panel" type="Panel" parent="Overlay"]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -360.0
-offset_top = 18.0
-offset_right = -18.0
-offset_bottom = 210.0
-grow_horizontal = 0
-
-[node name="MarginContainer" type="MarginContainer" parent="Overlay/Panel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Overlay/Panel/MarginContainer"]
-layout_mode = 2
-
-[node name="Title" type="Label" parent="Overlay/Panel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "Garage Bay"
-
-[node name="Instruction" type="Label" parent="Overlay/Panel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "A/D: category  W/S: part  Q/E: rotate  (frame/wheel/fork/bar/seat/pedal/paint)"
-
-[node name="SelectionLabel" type="Label" parent="Overlay/Panel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "Selected: Frame"
-
-[node name="ValueLabel" type="Label" parent="Overlay/Panel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "Option: Trail Frame"
-
-[node name="ButtonRow" type="HBoxContainer" parent="Overlay/Panel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="SaveButton" type="Button" parent="Overlay/Panel/MarginContainer/VBoxContainer/ButtonRow"]
-layout_mode = 2
-text = "Save and Ride"
-
-[node name="CancelButton" type="Button" parent="Overlay/Panel/MarginContainer/VBoxContainer/ButtonRow"]
-layout_mode = 2
-text = "Cancel"
-
-[connection signal="pressed" from="Overlay/Panel/MarginContainer/VBoxContainer/ButtonRow/SaveButton" to="." method="_on_save_pressed"]
-[connection signal="pressed" from="Overlay/Panel/MarginContainer/VBoxContainer/ButtonRow/CancelButton" to="." method="_on_cancel_pressed"]
+[connection signal="pressed" from="MenuPanel/Margin/VBox/ButtonRow/SaveButton" to="." method="_on_save_pressed"]
+[connection signal="pressed" from="MenuPanel/Margin/VBox/ButtonRow/CancelButton" to="." method="_on_cancel_pressed"]

@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3]
+[gd_scene load_steps=24 format=3]
 
 [ext_resource type="Script" path="res://scripts/RideScene.gd" id="1_ride"]
 [ext_resource type="Script" path="res://scripts/BikeController.gd" id="2_bike"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://scripts/ProceduralCity.gd" id="4_city"]
 [ext_resource type="Script" path="res://scripts/BikeVisualBuilder.gd" id="5_bikevisual"]
 [ext_resource type="Script" path="res://scripts/RiderVisualBuilder.gd" id="6_ridervisual"]
+[ext_resource type="Script" path="res://scripts/MinimapHUD.gd" id="7_minimap"]
 
 [sub_resource type="BoxMesh" id="1_groundmesh"]
 size = Vector3(200, 1, 200)
@@ -276,17 +277,4 @@ offset_left = 20.0
 offset_top = 760.0
 offset_right = 150.0
 offset_bottom = 890.0
-
-[node name="MapBackground" type="ColorRect" parent="HUD/MinimapPanel"]
-offset_left = 5.0
-offset_top = 5.0
-offset_right = 125.0
-offset_bottom = 125.0
-color = Color(0.08, 0.1, 0.11, 0.85)
-
-[node name="Marker" type="ColorRect" parent="HUD/MinimapPanel"]
-offset_left = 55.0
-offset_top = 55.0
-offset_right = 63.0
-offset_bottom = 63.0
-color = Color(0.9, 0.3, 0.2, 1)
+script = ExtResource("7_minimap")

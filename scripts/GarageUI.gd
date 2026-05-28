@@ -2,15 +2,41 @@ extends Control
 
 const BikeConfigResource := preload("res://resources/BikeConfig.gd")
 const BikeRigScript := preload("res://scripts/BikeRig.gd")
+const BikePaintLibraryScript := preload("res://scripts/BikePaintLibrary.gd")
 
-@onready var bike_visual: Node3D = $SubViewportContainer/SubViewport/World/BikePivot/BikeVisual
-@onready var bike_pivot: Node3D = $SubViewportContainer/SubViewport/World/BikePivot
-@onready var selection_label: Label = $Overlay/Panel/MarginContainer/VBoxContainer/SelectionLabel
-@onready var value_label: Label = $Overlay/Panel/MarginContainer/VBoxContainer/ValueLabel
+const MENU_FONT_NORMAL := 22
+const MENU_FONT_SELECTED := 30
+const BIKE_SHOWROOM_X := 3.2
+
+@onready var bike_visual: Node3D = $ViewportPanel/SubViewportContainer/SubViewport/World/BikePivot/BikeVisual
+@onready var bike_pivot: Node3D = $ViewportPanel/SubViewportContainer/SubViewport/World/BikePivot
+@onready var showroom_camera: Camera3D = $ViewportPanel/SubViewportContainer/SubViewport/World/Camera3D
+@onready var menu_list: VBoxContainer = $MenuPanel/Margin/VBox/MenuList
+@onready var selection_label: Label = $MenuPanel/Margin/VBox/DetailBox/SelectionLabel
+@onready var value_label: Label = $MenuPanel/Margin/VBox/DetailBox/ValueLabel
+@onready var hint_label: Label = $MenuPanel/Margin/VBox/DetailBox/HintLabel
+@onready var viewport_container: SubViewportContainer = $ViewportPanel/SubViewportContainer
 
 var _preview_config: Dictionary = {}
 var _category_index: int = 0
-var _categories: Array[String] = ["frame", "wheel", "fork", "handlebar", "seat", "pedal", "paint"]
+var _menu_rows: Array[Label] = []
+var _categories: Array[String] = [
+	"frame", "wheel", "fork", "handlebar", "seat", "pedal",
+	"paint_frame", "paint_fork", "paint_rim", "paint_handlebar", "paint_seat"
+]
+var _category_names: Dictionary = {
+	"frame": "Frame",
+	"wheel": "Wheels",
+	"fork": "Fork",
+	"handlebar": "Handlebar",
+	"seat": "Saddle",
+	"pedal": "Pedals",
+	"paint_frame": "Paint — Frame",
+	"paint_fork": "Paint — Fork",
+	"paint_rim": "Paint — Rims",
+	"paint_handlebar": "Paint — Bars",
+	"paint_seat": "Paint — Saddle"
+}
 var _part_options: Dictionary = {
 	"frame": [
 		{"id": "trail", "label": "Trail Frame"},
@@ -46,14 +72,6 @@ var _part_options: Dictionary = {
 		{"id": "platform", "label": "Platform Pedals"},
 		{"id": "clipless", "label": "Clipless Pedals"},
 		{"id": "dh", "label": "DH Pedals"}
-	],
-	"paint": [
-		{"id": "sunset_orange", "label": "Sunset Orange", "color": Color(0.88, 0.35, 0.15, 1.0)},
-		{"id": "trail_green", "label": "Trail Green", "color": Color(0.2, 0.56, 0.3, 1.0)},
-		{"id": "arctic_blue", "label": "Arctic Blue", "color": Color(0.1, 0.5, 0.9, 1.0)},
-		{"id": "factory_black", "label": "Factory Black", "color": Color(0.15, 0.15, 0.17, 1.0)},
-		{"id": "crimson", "label": "Crimson", "color": Color(0.72, 0.12, 0.18, 1.0)},
-		{"id": "violet", "label": "Violet", "color": Color(0.42, 0.2, 0.78, 1.0)}
 	]
 }
 var _selection_indices: Dictionary = {
@@ -63,37 +81,126 @@ var _selection_indices: Dictionary = {
 	"handlebar": 0,
 	"seat": 0,
 	"pedal": 0,
-	"paint": 0
+	"paint_frame": 0,
+	"paint_fork": 0,
+	"paint_rim": 0,
+	"paint_handlebar": 0,
+	"paint_seat": 0
+}
+var _paint_finish_indices: Dictionary = {
+	"paint_frame": 0,
+	"paint_fork": 0,
+	"paint_rim": 0,
+	"paint_handlebar": 0,
+	"paint_seat": 0
 }
 
 func _ready() -> void:
+	_style_panels()
+	for paint_category: String in ["paint_frame", "paint_fork", "paint_rim", "paint_handlebar", "paint_seat"]:
+		_part_options[paint_category] = BikePaintLibraryScript.color_presets()
+	_build_menu()
+	_setup_showroom_camera()
 	_init_preview_config()
 	_sync_indices_from_config()
 	_apply_preview()
-	_update_labels()
+	_update_ui()
 	set_process_unhandled_input(true)
+	resized.connect(_on_resized)
+
+func _style_panels() -> void:
+	var menu_style := StyleBoxFlat.new()
+	menu_style.bg_color = Color(0.07, 0.08, 0.1, 1.0)
+	$MenuPanel.add_theme_stylebox_override("panel", menu_style)
+	var viewport_style := StyleBoxFlat.new()
+	viewport_style.bg_color = Color(0.05, 0.06, 0.07, 1.0)
+	$ViewportPanel.add_theme_stylebox_override("panel", viewport_style)
+
+func _on_resized() -> void:
+	if viewport_container:
+		var size := viewport_container.size
+		if size.x > 0 and size.y > 0:
+			viewport_container.get_child(0).size = Vector2i(int(size.x), int(size.y))
+
+func _setup_showroom_camera() -> void:
+	bike_pivot.position = Vector3(BIKE_SHOWROOM_X, 0.0, 0.0)
+	var look_target := bike_pivot.position + Vector3(0.0, 0.55, 0.0)
+	showroom_camera.position = Vector3(BIKE_SHOWROOM_X - 8.4, 0.95, 0.2)
+	showroom_camera.look_at(look_target, Vector3.UP)
+	showroom_camera.fov = 36.0
+
+func _build_menu() -> void:
+	for child in menu_list.get_children():
+		child.queue_free()
+	_menu_rows.clear()
+
+	for category: String in _categories:
+		var row := Label.new()
+		row.text = "  %s" % _category_names.get(category, category.capitalize())
+		row.add_theme_font_size_override("font_size", MENU_FONT_NORMAL)
+		row.add_theme_color_override("font_color", Color(0.72, 0.74, 0.78, 1.0))
+		menu_list.add_child(row)
+		_menu_rows.append(row)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		match event.keycode:
-			KEY_A:
-				_category_index = posmod(_category_index - 1, _categories.size())
-				_update_labels()
-			KEY_D:
-				_category_index = posmod(_category_index + 1, _categories.size())
-				_update_labels()
-			KEY_W:
-				_step_option(1)
-			KEY_S:
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+
+	var category: String = _categories[_category_index]
+	match event.keycode:
+		KEY_W, KEY_UP:
+			_category_index = posmod(_category_index - 1, _categories.size())
+			_update_ui()
+		KEY_S, KEY_DOWN:
+			_category_index = posmod(_category_index + 1, _categories.size())
+			_update_ui()
+		KEY_A, KEY_LEFT:
+			if _is_paint_category(category):
+				_step_paint_finish(category, -1)
+			else:
 				_step_option(-1)
-			KEY_Q:
-				bike_pivot.rotate_y(0.12)
-			KEY_E:
-				bike_pivot.rotate_y(-0.12)
-			KEY_ENTER:
-				_on_save_pressed()
-			KEY_ESCAPE:
-				_on_cancel_pressed()
+		KEY_D, KEY_RIGHT:
+			if _is_paint_category(category):
+				_step_paint_finish(category, 1)
+			else:
+				_step_option(1)
+		KEY_Q:
+			if _is_paint_category(category):
+				_step_paint_color(category, -1)
+		KEY_E:
+			if _is_paint_category(category):
+				_step_paint_color(category, 1)
+		KEY_ENTER, KEY_KP_ENTER:
+			_on_save_pressed()
+		KEY_ESCAPE:
+			_on_cancel_pressed()
+
+func _is_paint_category(category: String) -> bool:
+	return category.begins_with("paint_")
+
+func _paint_part_key(category: String) -> String:
+	return category.replace("paint_", "")
+
+func _step_paint_color(category: String, direction: int) -> void:
+	var options: Array = _part_options[category]
+	var idx: int = int(_selection_indices[category])
+	idx = posmod(idx + direction, options.size())
+	_selection_indices[category] = idx
+	var selected: Dictionary = options[idx]
+	var part: String = _paint_part_key(category)
+	_preview_config["%s_paint_color" % part] = selected["color"]
+	_apply_preview()
+	_update_ui()
+
+func _step_paint_finish(category: String, direction: int) -> void:
+	var finishes: Array = BikePaintLibraryScript.finishes()
+	var idx: int = int(_paint_finish_indices[category])
+	idx = posmod(idx + direction, finishes.size())
+	_paint_finish_indices[category] = idx
+	var part: String = _paint_part_key(category)
+	_preview_config["%s_paint_finish" % part] = str(finishes[idx]["id"])
+	_apply_preview()
+	_update_ui()
 
 func _step_option(direction: int) -> void:
 	var category: String = _categories[_category_index]
@@ -115,19 +222,28 @@ func _step_option(direction: int) -> void:
 			_preview_config["seat_id"] = selected["id"]
 		"pedal":
 			_preview_config["pedal_id"] = selected["id"]
-		"paint":
-			_preview_config["paint_color"] = selected["color"]
 	_apply_preview()
-	_update_labels()
+	_update_ui()
 
 func _on_save_pressed() -> void:
-	GameState.bike_config.paint_color = _preview_config["paint_color"]
-	GameState.bike_config.frame_id = _preview_config["frame_id"]
-	GameState.bike_config.wheel_id = _preview_config["wheel_id"]
-	GameState.bike_config.fork_id = _preview_config["fork_id"]
-	GameState.bike_config.handlebar_id = _preview_config["handlebar_id"]
-	GameState.bike_config.seat_id = _preview_config["seat_id"]
-	GameState.bike_config.pedal_id = _preview_config["pedal_id"]
+	var cfg: Resource = GameState.bike_config
+	cfg.frame_id = _preview_config["frame_id"]
+	cfg.wheel_id = _preview_config["wheel_id"]
+	cfg.fork_id = _preview_config["fork_id"]
+	cfg.handlebar_id = _preview_config["handlebar_id"]
+	cfg.seat_id = _preview_config["seat_id"]
+	cfg.pedal_id = _preview_config["pedal_id"]
+	cfg.frame_paint_color = _preview_config["frame_paint_color"]
+	cfg.fork_paint_color = _preview_config["fork_paint_color"]
+	cfg.rim_paint_color = _preview_config["rim_paint_color"]
+	cfg.handlebar_paint_color = _preview_config["handlebar_paint_color"]
+	cfg.seat_paint_color = _preview_config["seat_paint_color"]
+	cfg.frame_paint_finish = _preview_config["frame_paint_finish"]
+	cfg.fork_paint_finish = _preview_config["fork_paint_finish"]
+	cfg.rim_paint_finish = _preview_config["rim_paint_finish"]
+	cfg.handlebar_paint_finish = _preview_config["handlebar_paint_finish"]
+	cfg.seat_paint_finish = _preview_config["seat_paint_finish"]
+	cfg.sync_legacy_paint_color()
 	GameState.persist()
 	var main: Node = get_tree().current_scene
 	if main and main.has_method("show_ride_scene"):
@@ -139,14 +255,24 @@ func _on_cancel_pressed() -> void:
 		main.show_ride_scene()
 
 func _init_preview_config() -> void:
+	var cfg: Resource = GameState.bike_config
 	_preview_config = {
-		"frame_id": GameState.bike_config.frame_id,
-		"wheel_id": GameState.bike_config.wheel_id,
-		"fork_id": GameState.bike_config.fork_id,
-		"handlebar_id": GameState.bike_config.handlebar_id,
-		"seat_id": GameState.bike_config.seat_id,
-		"pedal_id": GameState.bike_config.pedal_id,
-		"paint_color": GameState.bike_config.paint_color
+		"frame_id": cfg.frame_id,
+		"wheel_id": cfg.wheel_id,
+		"fork_id": cfg.fork_id,
+		"handlebar_id": cfg.handlebar_id,
+		"seat_id": cfg.seat_id,
+		"pedal_id": cfg.pedal_id,
+		"frame_paint_color": cfg.frame_paint_color,
+		"fork_paint_color": cfg.fork_paint_color,
+		"rim_paint_color": cfg.rim_paint_color,
+		"handlebar_paint_color": cfg.handlebar_paint_color,
+		"seat_paint_color": cfg.seat_paint_color,
+		"frame_paint_finish": cfg.frame_paint_finish,
+		"fork_paint_finish": cfg.fork_paint_finish,
+		"rim_paint_finish": cfg.rim_paint_finish,
+		"handlebar_paint_finish": cfg.handlebar_paint_finish,
+		"seat_paint_finish": cfg.seat_paint_finish
 	}
 
 func _sync_indices_from_config() -> void:
@@ -156,16 +282,13 @@ func _sync_indices_from_config() -> void:
 	_sync_index_for("handlebar", "handlebar_id")
 	_sync_index_for("seat", "seat_id")
 	_sync_index_for("pedal", "pedal_id")
-	var paint_options: Array = _part_options["paint"]
-	var best_idx: int = 0
-	var best_dist: float = 9999.0
-	for i in range(paint_options.size()):
-		var c: Color = paint_options[i]["color"]
-		var d := absf(c.r - _preview_config["paint_color"].r) + absf(c.g - _preview_config["paint_color"].g) + absf(c.b - _preview_config["paint_color"].b)
-		if d < best_dist:
-			best_dist = d
-			best_idx = i
-	_selection_indices["paint"] = best_idx
+	for paint_category: String in ["paint_frame", "paint_fork", "paint_rim", "paint_handlebar", "paint_seat"]:
+		var part: String = _paint_part_key(paint_category)
+		var color: Color = _preview_config["%s_paint_color" % part]
+		_selection_indices[paint_category] = BikePaintLibraryScript.find_color_index(color)
+		_paint_finish_indices[paint_category] = BikePaintLibraryScript.find_finish_index(
+			str(_preview_config["%s_paint_finish" % part])
+		)
 
 func _sync_index_for(category: String, config_key: String) -> void:
 	var options: Array = _part_options[category]
@@ -178,21 +301,38 @@ func _sync_index_for(category: String, config_key: String) -> void:
 
 func _apply_preview() -> void:
 	var preview_config: Resource = BikeConfigResource.new()
-	preview_config.set("frame_id", _preview_config["frame_id"])
-	preview_config.set("wheel_id", _preview_config["wheel_id"])
-	preview_config.set("fork_id", _preview_config["fork_id"])
-	preview_config.set("handlebar_id", _preview_config["handlebar_id"])
-	preview_config.set("seat_id", _preview_config["seat_id"])
-	preview_config.set("pedal_id", _preview_config["pedal_id"])
-	preview_config.set("paint_color", _preview_config["paint_color"])
+	for key: String in _preview_config.keys():
+		preview_config.set(key, _preview_config[key])
 	bike_visual.call("apply_config", preview_config)
-	bike_pivot.position = Vector3(0.0, BikeRigScript.GARAGE_FLOOR_Y, 0.0)
+	bike_pivot.position = Vector3(BIKE_SHOWROOM_X, BikeRigScript.GARAGE_FLOOR_Y, 0.0)
 
-func _update_labels() -> void:
+func _update_ui() -> void:
 	var category: String = _categories[_category_index]
-	var category_name := category.capitalize()
-	selection_label.text = "Selected: %s (A/D)" % category_name
-	var options: Array = _part_options[category]
-	var idx: int = int(_selection_indices[category])
-	var selected: Dictionary = options[idx]
-	value_label.text = "Option: %s (W/S)" % selected["label"]
+	_refresh_menu_highlight()
+
+	selection_label.text = _category_names.get(category, category.capitalize())
+	if _is_paint_category(category):
+		var color_options: Array = _part_options[category]
+		var color_idx: int = int(_selection_indices[category])
+		var finish_idx: int = int(_paint_finish_indices[category])
+		var color_label: String = color_options[color_idx]["label"]
+		var finish_label: String = BikePaintLibraryScript.finishes()[finish_idx]["label"]
+		value_label.text = "%s  ·  %s" % [color_label, finish_label]
+		hint_label.text = "↑↓ part   Q/E color   ←→ texture   Enter save   Esc cancel"
+	else:
+		var options: Array = _part_options[category]
+		var idx: int = int(_selection_indices[category])
+		value_label.text = options[idx]["label"]
+		hint_label.text = "↑↓ part   ←→ option   Enter save   Esc cancel"
+
+func _refresh_menu_highlight() -> void:
+	for i in range(_menu_rows.size()):
+		var row: Label = _menu_rows[i]
+		if i == _category_index:
+			row.text = "▶ %s" % _category_names.get(_categories[i], _categories[i]).strip_edges()
+			row.add_theme_font_size_override("font_size", MENU_FONT_SELECTED)
+			row.add_theme_color_override("font_color", Color(1.0, 0.58, 0.12, 1.0))
+		else:
+			row.text = "  %s" % _category_names.get(_categories[i], _categories[i])
+			row.add_theme_font_size_override("font_size", MENU_FONT_NORMAL)
+			row.add_theme_color_override("font_color", Color(0.72, 0.74, 0.78, 1.0))

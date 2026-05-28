@@ -8,7 +8,7 @@ const BikeRigScript := preload("res://scripts/BikeRig.gd")
 @onready var hint_label: Label = $HUD/MarginContainer/VBoxContainer/HintLabel
 @onready var mission_label: Label = $HUD/MarginContainer/VBoxContainer/MissionLabel
 @onready var checkpoint_label: Label = $HUD/MarginContainer/VBoxContainer/CheckpointLabel
-@onready var minimap_marker: ColorRect = $HUD/MinimapPanel/Marker
+@onready var minimap: Panel = $HUD/MinimapPanel
 @onready var rider_visual: Node3D = $SubViewportContainer/SubViewport/World/Bike/RiderVisual
 @onready var bike_visual: Node3D = $SubViewportContainer/SubViewport/World/Bike/BikeVisual
 @onready var checkpoint: Area3D = $SubViewportContainer/SubViewport/World/CheckpointA
@@ -19,12 +19,14 @@ var spawn_position: Vector3 = BikeRigScript.ride_spawn_position()
 var mission_step: int = 0
 var _garage_zone_active: bool = false
 var _pedal_phase: float = 0.0
+var _garage_world_pos: Vector3 = Vector3(-18.0, 0.0, -7.8)
 
 func _ready() -> void:
-	hint_label.text = "Ride to garage entrance to open garage | C: Character | R: Reset"
+	hint_label.text = "Follow orange on minimap — ride into the open garage door and press G | C: Character | R: Reset"
 	_update_mission_text()
 	checkpoint_label.text = "Checkpoint: not reached"
 	_apply_visuals()
+	_setup_minimap()
 	checkpoint.body_entered.connect(_on_checkpoint_body_entered)
 	if world_root.has_signal("garage_zone_created"):
 		world_root.garage_zone_created.connect(_on_garage_zone_created)
@@ -33,7 +35,8 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	var kmh := int((bike as Node).get("speed") * 3.6)
 	speed_label.text = "Speed: %d km/h" % max(kmh, 0)
-	_update_minimap_marker()
+	if minimap.has_method("update_for_player"):
+		minimap.call("update_for_player", bike.global_position)
 	if Input.is_action_just_pressed("open_garage") and _garage_zone_active:
 		_complete_mission_step(0)
 		get_tree().root.get_node("Main").show_garage()
@@ -86,14 +89,30 @@ func _complete_mission_step(required_step: int) -> void:
 	mission_step += 1
 	_update_mission_text()
 
-func _update_minimap_marker() -> void:
-	var world_pos: Vector3 = bike.global_position
-	var map_size: Vector2 = Vector2(120, 120)
-	var local_x: float = fposmod(world_pos.x, 120.0) / 120.0
-	var local_y: float = fposmod(world_pos.z, 120.0) / 120.0
-	var x: float = clamp(local_x, 0.0, 1.0)
-	var y: float = clamp(local_y, 0.0, 1.0)
-	minimap_marker.position = Vector2(x * map_size.x - 4.0, y * map_size.y - 4.0)
+func _setup_minimap() -> void:
+	if not minimap.has_method("set_points_of_interest"):
+		return
+	var pois: Array = [
+		{
+			"id": "garage",
+			"world_position": _garage_world_pos,
+			"color": Color(1.0, 0.55, 0.08, 1.0)
+		},
+		{
+			"id": "checkpoint",
+			"world_position": checkpoint.global_position,
+			"color": Color(0.2, 0.85, 1.0, 1.0)
+		},
+		{
+			"id": "spawn",
+			"world_position": spawn_position,
+			"color": Color(0.75, 0.75, 0.75, 1.0)
+		}
+	]
+	minimap.call("set_points_of_interest", pois)
+
+func _refresh_minimap_pois() -> void:
+	_setup_minimap()
 
 func _connect_existing_garage_zones() -> void:
 	for node in world_root.get_children():
@@ -106,6 +125,8 @@ func _scan_garage_zone_recursive(node: Node) -> void:
 		_scan_garage_zone_recursive(child)
 
 func _on_garage_zone_created(zone: Area3D) -> void:
+	_garage_world_pos = zone.global_position
+	_refresh_minimap_pois()
 	if not zone.body_entered.is_connected(_on_garage_zone_body_entered):
 		zone.body_entered.connect(_on_garage_zone_body_entered)
 	if not zone.body_exited.is_connected(_on_garage_zone_body_exited):

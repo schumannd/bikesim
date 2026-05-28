@@ -5,6 +5,11 @@ signal garage_zone_created(zone: Area3D)
 @export var chunk_size: float = 120.0
 @export var load_radius: int = 5
 
+# Reserved footprint on chunk (0,0) — no random buildings inside this box.
+const GARAGE_LOT_MIN := Vector3(-40.0, 0.0, -40.0)
+const GARAGE_LOT_MAX := Vector3(-6.0, 0.0, -4.0)
+const GARAGE_POSITION := Vector3(-18.0, 0.0, -16.0)
+
 var _loaded_chunks: Dictionary = {}
 var _bike: Node3D
 
@@ -50,9 +55,9 @@ func _create_chunk(chunk_coord: Vector2i, key: String) -> void:
 
 	_add_ground(chunk_node)
 	_add_roads(chunk_node)
-	_add_city_blocks(chunk_node, chunk_coord)
 	if chunk_coord == Vector2i.ZERO:
 		_add_garage(chunk_node)
+	_add_city_blocks(chunk_node, chunk_coord)
 
 func _add_ground(parent: Node3D) -> void:
 	var ground_body := StaticBody3D.new()
@@ -129,6 +134,9 @@ func _add_city_blocks(parent: Node3D, chunk_coord: Vector2i) -> void:
 		shape.size = mesh.size
 		collision.shape = shape
 		building.position = slot + Vector3(rng.randf_range(-4.0, 4.0), 0.0, rng.randf_range(-4.0, 4.0))
+		if chunk_coord == Vector2i.ZERO and _overlaps_garage_lot(building.position, mesh.size):
+			building.queue_free()
+			continue
 		building.add_child(collision)
 		var building_mesh := MeshInstance3D.new()
 		building_mesh.mesh = mesh
@@ -140,6 +148,12 @@ func _add_city_blocks(parent: Node3D, chunk_coord: Vector2i) -> void:
 		building_mesh.material_override = mat
 		building.add_child(building_mesh)
 		parent.add_child(building)
+
+func _overlaps_garage_lot(building_pos: Vector3, building_size: Vector3) -> bool:
+	var half := Vector3(building_size.x * 0.5, 0.0, building_size.z * 0.5)
+	var bmin := building_pos - half
+	var bmax := building_pos + Vector3(half.x, building_size.y, half.z)
+	return not (bmax.x < GARAGE_LOT_MIN.x or bmin.x > GARAGE_LOT_MAX.x or bmax.z < GARAGE_LOT_MIN.z or bmin.z > GARAGE_LOT_MAX.z)
 
 func _chunk_seed(chunk_coord: Vector2i) -> int:
 	var base_seed: int = int(GameState.world_seed)
@@ -155,37 +169,92 @@ func _clear_legacy_static_layout() -> void:
 			node.queue_free()
 
 func _add_garage(parent: Node3D) -> void:
-	var garage := StaticBody3D.new()
+	var garage := Node3D.new()
 	garage.name = "GarageBuilding"
-	garage.position = Vector3(-28.0, 0.0, -26.0)
+	garage.position = GARAGE_POSITION
 	parent.add_child(garage)
 
-	var garage_collision := CollisionShape3D.new()
-	var garage_shape := BoxShape3D.new()
-	garage_shape.size = Vector3(18.0, 8.0, 14.0)
-	garage_collision.shape = garage_shape
-	garage_collision.position = Vector3(0.0, 4.0, 0.0)
-	garage.add_child(garage_collision)
+	var wall_mat := _garage_material(Color(1.0, 0.55, 0.08, 1.0), 0.35)
+	var trim_mat := _garage_material(Color(1.0, 0.95, 0.2, 1.0), 1.0)
+	var interior_mat := _garage_material(Color(0.15, 0.35, 0.9, 1.0), 0.8)
+	var pad_mat := _garage_material(Color(0.55, 0.56, 0.58, 1.0), 0.9)
 
-	var garage_mesh := MeshInstance3D.new()
-	var garage_box := BoxMesh.new()
-	garage_box.size = Vector3(18.0, 8.0, 14.0)
-	garage_mesh.mesh = garage_box
-	garage_mesh.position = Vector3(0.0, 4.0, 0.0)
-	var garage_mat := StandardMaterial3D.new()
-	garage_mat.albedo_color = Color(0.2, 0.24, 0.3, 1.0)
-	garage_mat.roughness = 0.95
-	garage_mesh.material_override = garage_mat
-	garage.add_child(garage_mesh)
+	var width := 14.0
+	var depth := 10.0
+	var height := 7.0
+	var wall_t := 1.1
+	var door_w := 5.2
+	var door_h := 4.2
+
+	_add_garage_box(garage, "ApproachPad", Vector3(0.0, 0.03, 7.2), Vector3(door_w + 2.4, 0.06, 5.0), pad_mat, true)
+	_add_garage_box(garage, "Floor", Vector3(0.0, 0.08, 0.0), Vector3(width, 0.16, depth), pad_mat, true)
+	_add_garage_box(garage, "BackWall", Vector3(0.0, height * 0.5, -depth * 0.5 + wall_t * 0.5), Vector3(width, height, wall_t), wall_mat, true)
+	_add_garage_box(garage, "LeftWall", Vector3(-width * 0.5 + wall_t * 0.5, height * 0.5, 0.0), Vector3(wall_t, height, depth), wall_mat, true)
+	_add_garage_box(garage, "RightWall", Vector3(width * 0.5 - wall_t * 0.5, height * 0.5, 0.0), Vector3(wall_t, height, depth), wall_mat, true)
+
+	var side_span := (width - door_w) * 0.5
+	_add_garage_box(garage, "FrontLeftPillar", Vector3(-door_w * 0.5 - side_span * 0.5, height * 0.5, depth * 0.5 - wall_t * 0.5), Vector3(side_span, height, wall_t), wall_mat, true)
+	_add_garage_box(garage, "FrontRightPillar", Vector3(door_w * 0.5 + side_span * 0.5, height * 0.5, depth * 0.5 - wall_t * 0.5), Vector3(side_span, height, wall_t), wall_mat, true)
+	_add_garage_box(garage, "DoorLintel", Vector3(0.0, height - (height - door_h) * 0.5, depth * 0.5 - wall_t * 0.5), Vector3(door_w, height - door_h, wall_t), wall_mat, true)
+
+	_add_garage_box(garage, "DoorInterior", Vector3(0.0, door_h * 0.5, depth * 0.5 - 1.2), Vector3(door_w - 0.4, door_h - 0.2, 1.6), interior_mat, false)
+	_add_garage_box(garage, "DoorFrameL", Vector3(-door_w * 0.5 - 0.12, door_h * 0.5, depth * 0.5 + 0.1), Vector3(0.2, door_h, 0.25), trim_mat, false)
+	_add_garage_box(garage, "DoorFrameR", Vector3(door_w * 0.5 + 0.12, door_h * 0.5, depth * 0.5 + 0.1), Vector3(0.2, door_h, 0.25), trim_mat, false)
+	_add_garage_box(garage, "DoorRamp", Vector3(0.0, 0.12, depth * 0.5 + 2.0), Vector3(door_w, 0.24, 2.8), trim_mat, true)
+
+	var sign := MeshInstance3D.new()
+	sign.name = "GarageSign"
+	var sign_mesh := BoxMesh.new()
+	sign_mesh.size = Vector3(6.0, 1.4, 0.3)
+	sign.mesh = sign_mesh
+	sign.position = Vector3(0.0, height + 0.5, depth * 0.5 + 0.2)
+	sign.material_override = trim_mat
+	garage.add_child(sign)
+
+	var beacon := OmniLight3D.new()
+	beacon.name = "GarageBeacon"
+	beacon.position = Vector3(0.0, 4.5, depth * 0.5 + 2.5)
+	beacon.light_color = Color(1.0, 0.6, 0.1, 1.0)
+	beacon.light_energy = 2.8
+	beacon.omni_range = 18.0
+	garage.add_child(beacon)
 
 	var zone := Area3D.new()
 	zone.name = "GarageEntranceZone"
-	zone.position = Vector3(0.0, 1.5, 7.6)
+	zone.position = Vector3(0.0, 1.2, depth * 0.5 + 3.2)
 	zone.set_meta("is_garage_zone", true)
 	garage.add_child(zone)
 	var zone_shape_node := CollisionShape3D.new()
 	var zone_shape := BoxShape3D.new()
-	zone_shape.size = Vector3(5.0, 3.0, 3.0)
+	zone_shape.size = Vector3(door_w + 1.0, 3.0, 4.0)
 	zone_shape_node.shape = zone_shape
 	zone.add_child(zone_shape_node)
 	garage_zone_created.emit(zone)
+
+func _garage_material(color: Color, emission_energy: float) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.roughness = 0.7
+	if emission_energy > 0.5:
+		mat.emission_enabled = true
+		mat.emission = color
+		mat.emission_energy_multiplier = emission_energy
+	return mat
+
+func _add_garage_box(parent: Node3D, box_name: String, pos: Vector3, size: Vector3, mat: Material, with_collision: bool) -> void:
+	var body := StaticBody3D.new()
+	body.name = box_name
+	body.position = pos
+	parent.add_child(body)
+	if with_collision:
+		var shape_node := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = size
+		shape_node.shape = shape
+		body.add_child(shape_node)
+	var mesh_node := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	mesh_node.mesh = mesh
+	mesh_node.material_override = mat
+	body.add_child(mesh_node)
