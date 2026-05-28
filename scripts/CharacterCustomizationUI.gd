@@ -39,11 +39,13 @@ func _ready() -> void:
 	outfit_picker.color_changed.connect(func(_c: Color) -> void: _refresh_preview())
 	resized.connect(_on_resized)
 	_disable_control_focus()
-	focus_mode = Control.FOCUS_ALL
-	grab_focus()
+	viewport_container.focus_mode = Control.FOCUS_NONE
+	viewport_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$PreviewPanel.focus_mode = Control.FOCUS_NONE
 	set_process(true)
-	set_process_input(true)
-	_apply_nav_selection()
+	set_process_unhandled_input(true)
+	call_deferred("_refresh_preview")
+	call_deferred("_apply_nav_selection")
 
 func _disable_control_focus() -> void:
 	for control: Control in [outfit_option, hair_option, skin_picker, outfit_picker, confirm_button, cancel_button]:
@@ -54,39 +56,42 @@ func _process(delta: float) -> void:
 	if rider_pivot:
 		rider_pivot.rotation.y = _preview_spin
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
 	var key_event := event as InputEventKey
-	var handled := true
-	match key_event.keycode:
-		KEY_W, KEY_UP:
-			_nav_index = posmod(_nav_index - 1, _nav_fields.size())
-			SoundEffects.play_menu_move()
-			_apply_nav_selection()
-		KEY_S, KEY_DOWN:
-			_nav_index = posmod(_nav_index + 1, _nav_fields.size())
-			SoundEffects.play_menu_move()
-			_apply_nav_selection()
-		KEY_A, KEY_LEFT:
-			_step_field(-1)
-		KEY_D, KEY_RIGHT:
-			_step_field(1)
-		KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
-			_activate_selection()
-		KEY_ESCAPE:
-			_on_cancel_pressed()
-		_:
-			handled = false
-	if handled:
-		get_viewport().set_input_as_handled()
+	if _matches_keys(key_event, [KEY_W, KEY_UP]):
+		_nav_index = posmod(_nav_index - 1, _nav_fields.size())
+		SoundEffects.play_menu_move()
+		_apply_nav_selection()
+	elif _matches_keys(key_event, [KEY_S, KEY_DOWN]):
+		_nav_index = posmod(_nav_index + 1, _nav_fields.size())
+		SoundEffects.play_menu_move()
+		_apply_nav_selection()
+	elif _matches_keys(key_event, [KEY_A, KEY_LEFT]):
+		_step_field(-1)
+	elif _matches_keys(key_event, [KEY_D, KEY_RIGHT]):
+		_step_field(1)
+	elif _matches_keys(key_event, [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]):
+		_activate_selection()
+	elif _matches_keys(key_event, [KEY_ESCAPE]):
+		_on_cancel_pressed()
+
+func _matches_keys(event: InputEventKey, keys: Array) -> bool:
+	for key: Key in keys:
+		if event.keycode == key or event.physical_keycode == key:
+			return true
+	return false
 
 func _activate_selection() -> void:
 	SoundEffects.play_menu_confirm()
-	if _nav_fields[_nav_index] == "cancel":
-		_on_cancel_pressed()
-	else:
-		_on_confirm_pressed()
+	match _nav_fields[_nav_index]:
+		"cancel":
+			_on_cancel_pressed()
+		"confirm":
+			_on_confirm_pressed()
+		_:
+			_on_confirm_pressed()
 
 func _step_field(direction: int) -> void:
 	var field: String = _nav_fields[_nav_index]
@@ -172,11 +177,14 @@ func _style_panels() -> void:
 	confirm_button.add_theme_font_size_override("font_size", 22)
 
 func _setup_preview_camera() -> void:
-	rider_pivot.position = Vector3(PREVIEW_CENTER_X, BikeRigScript.GARAGE_FLOOR_Y, 0.0)
-	var look_target := rider_pivot.position + Vector3(0.0, 0.95, 0.0)
-	preview_camera.position = Vector3(PREVIEW_CENTER_X - 3.6, 1.05, 2.4)
+	if rider_pivot == null or preview_camera == null:
+		return
+	rider_pivot.position = Vector3(PREVIEW_CENTER_X, 0.0, 0.0)
+	var look_target := rider_pivot.position + Vector3(0.0, 1.0, 0.0)
+	preview_camera.position = Vector3(PREVIEW_CENTER_X - 2.8, 1.15, 3.6)
 	preview_camera.look_at(look_target, Vector3.UP)
-	preview_camera.fov = 32.0
+	preview_camera.fov = 42.0
+	preview_camera.current = true
 
 func _apply_context_ui() -> void:
 	match GameState.character_edit_context:
@@ -214,13 +222,17 @@ func _apply_state_to_ui() -> void:
 
 func _preview_config() -> Resource:
 	var cfg: Resource = CharacterConfigResource.new()
-	cfg.outfit_id = outfit_option.get_item_text(outfit_option.selected).to_lower()
-	cfg.hair_style = hair_option.get_item_text(hair_option.selected).to_lower()
+	var outfit_idx := maxi(outfit_option.selected, 0)
+	var hair_idx := maxi(hair_option.selected, 0)
+	cfg.outfit_id = outfit_option.get_item_text(outfit_idx).to_lower()
+	cfg.hair_style = hair_option.get_item_text(hair_idx).to_lower()
 	cfg.skin_tone = skin_picker.color
 	cfg.outfit_color = outfit_picker.color
 	return cfg
 
 func _refresh_preview() -> void:
+	if rider_visual == null or not rider_visual.has_method("apply_config"):
+		return
 	rider_visual.call("apply_config", _preview_config())
 
 func _commit_to_game_state() -> void:

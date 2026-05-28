@@ -219,7 +219,8 @@ func _add_box_to(parent: Node3D, name: String, pos: Vector3, size: Vector3, mat:
 
 func _clear_parts() -> void:
 	for child in get_children():
-		child.queue_free()
+		remove_child(child)
+		child.free()
 
 func _make_material(color: Color, roughness: float) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
