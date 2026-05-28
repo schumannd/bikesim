@@ -81,13 +81,14 @@ func _create_chunk(chunk_coord: Vector2i, key: String, center_chunk: Vector2i) -
 	_add_roads(chunk_node, chunk_coord, zone)
 	WorldLandmarksScript.add_train_tracks(chunk_node, chunk_coord, chunk_size)
 
+	var local_center := Vector3(chunk_size * 0.5, 0.0, chunk_size * 0.5)
 	match zone:
 		CityTerrainScript.Zone.SCHOOL:
-			WorldLandmarksScript.add_school(chunk_node, Vector3(chunk_size * 0.5, 0.0, chunk_size * 0.5))
+			WorldLandmarksScript.add_school(chunk_node, local_center, chunk_coord, chunk_size)
 		CityTerrainScript.Zone.STADIUM:
-			WorldLandmarksScript.add_stadium(chunk_node, Vector3(chunk_size * 0.5, 0.0, chunk_size * 0.5))
+			WorldLandmarksScript.add_stadium(chunk_node, local_center, chunk_coord, chunk_size)
 		CityTerrainScript.Zone.TRAIN_STATION:
-			WorldLandmarksScript.add_train_station(chunk_node, Vector3(chunk_size * 0.5, 0.0, chunk_size * 0.5))
+			WorldLandmarksScript.add_train_station(chunk_node, local_center, chunk_coord, chunk_size)
 		CityTerrainScript.Zone.PARK:
 			_add_park_trees(chunk_node, chunk_coord, rng)
 
@@ -105,9 +106,6 @@ func _add_height_terrain(parent: Node3D, chunk_coord: Vector2i, zone: CityTerrai
 	var ox := float(chunk_coord.x) * chunk_size
 	var oz := float(chunk_coord.y) * chunk_size
 	var vert_count := (TERRAIN_GRID + 1) * (TERRAIN_GRID + 1)
-	var heights := PackedFloat32Array()
-	heights.resize(vert_count)
-
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var uvs := PackedVector2Array()
@@ -122,7 +120,6 @@ func _add_height_terrain(parent: Node3D, chunk_coord: Vector2i, zone: CityTerrai
 			var wx := ox + float(gx) * cell
 			var wz := oz + float(gz) * cell
 			var h := CityTerrainScript.sample_height(wx, wz)
-			heights[vi] = h
 			verts[vi] = Vector3(float(gx) * cell, h, float(gz) * cell)
 			normals[vi] = CityTerrainScript.sample_normal(wx, wz)
 			uvs[vi] = Vector2(float(gx) / TERRAIN_GRID, float(gz) / TERRAIN_GRID)
@@ -156,13 +153,8 @@ func _add_height_terrain(parent: Node3D, chunk_coord: Vector2i, zone: CityTerrai
 	body.name = "RideSurface"
 	parent.add_child(body)
 	var shape_node := CollisionShape3D.new()
-	var hmap := HeightMapShape3D.new()
-	hmap.map_width = TERRAIN_GRID + 1
-	hmap.map_depth = TERRAIN_GRID + 1
-	hmap.map_data = heights
-	shape_node.shape = hmap
-	shape_node.position = Vector3(chunk_size * 0.5, 0.0, chunk_size * 0.5)
-	shape_node.scale = Vector3(chunk_size, 1.0, chunk_size)
+	# Trimesh matches the visual mesh. HeightMapShape3D + non-uniform scale breaks physics.
+	shape_node.shape = array_mesh.create_trimesh_shape()
 	body.add_child(shape_node)
 
 func _add_roads(parent: Node3D, chunk_coord: Vector2i, zone: CityTerrainScript.Zone) -> void:
@@ -339,7 +331,8 @@ func _clear_legacy_static_layout() -> void:
 	for node_name: String in legacy_nodes:
 		var node := get_node_or_null(node_name)
 		if node:
-			node.queue_free()
+			remove_child(node)
+			node.free()
 
 func _add_garage(parent: Node3D, chunk_coord: Vector2i) -> void:
 	var garage := Node3D.new()

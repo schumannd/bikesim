@@ -43,9 +43,8 @@ static func add_train_tracks(parent: Node3D, chunk_coord: Vector2i, chunk_size: 
 			z += step * 0.5
 		x += step * 0.5
 
-static func add_school(parent: Node3D, center: Vector3) -> void:
-	var h := CityTerrainScript.sample_height(center.x, center.z)
-	var base := Vector3(center.x, h, center.z)
+static func add_school(parent: Node3D, local_center: Vector3, chunk_coord: Vector2i, chunk_size: float) -> void:
+	var base := _terrain_base(local_center, chunk_coord, chunk_size)
 	var wall := _mat(Color(0.72, 0.74, 0.76, 1.0), 0.9)
 	var roof := _mat(Color(0.55, 0.28, 0.22, 1.0), 0.85)
 	var accent := _mat(Color(0.2, 0.45, 0.75, 1.0), 0.8)
@@ -55,9 +54,8 @@ static func add_school(parent: Node3D, center: Vector3) -> void:
 	_add_colored_building(parent, base + Vector3(0.0, 9.5, 0.0), Vector3(34.0, 1.2, 20.0), roof, false)
 	_add_sign(parent, base + Vector3(0.0, 12.0, 12.0), Color(0.95, 0.95, 0.2, 1.0), "SCHOOL")
 
-static func add_stadium(parent: Node3D, center: Vector3) -> void:
-	var h := CityTerrainScript.sample_height(center.x, center.z)
-	var base := Vector3(center.x, h, center.z)
+static func add_stadium(parent: Node3D, local_center: Vector3, chunk_coord: Vector2i, chunk_size: float) -> void:
+	var base := _terrain_base(local_center, chunk_coord, chunk_size)
 	var field := _mat(Color(0.16, 0.48, 0.22, 1.0), 0.95)
 	var seat := _mat(Color(0.42, 0.44, 0.48, 1.0), 0.9)
 	_add_colored_building(parent, base + Vector3(0.0, 0.15, 0.0), Vector3(48.0, 0.3, 36.0), field, true)
@@ -67,9 +65,8 @@ static func add_stadium(parent: Node3D, center: Vector3) -> void:
 	_add_colored_building(parent, base + Vector3(24.0, 4.0, 0.0), Vector3(6.0, 8.0, 40.0), seat, true)
 	_add_sign(parent, base + Vector3(0.0, 10.0, 0.0), Color(1.0, 0.85, 0.2, 1.0), "STADIUM")
 
-static func add_train_station(parent: Node3D, center: Vector3) -> void:
-	var h := CityTerrainScript.sample_height(center.x, center.z)
-	var base := Vector3(center.x, h, center.z)
+static func add_train_station(parent: Node3D, local_center: Vector3, chunk_coord: Vector2i, chunk_size: float) -> void:
+	var base := _terrain_base(local_center, chunk_coord, chunk_size)
 	var stone := _mat(Color(0.48, 0.46, 0.44, 1.0), 0.88)
 	var glass := _mat(Color(0.55, 0.72, 0.88, 1.0), 0.2)
 	glass.emission_enabled = true
@@ -118,6 +115,12 @@ static func _add_box(parent: Node3D, pos: Vector3, size: Vector3, mat: Material)
 	mesh.position = pos
 	mesh.material_override = mat
 	parent.add_child(mesh)
+
+static func _terrain_base(local_center: Vector3, chunk_coord: Vector2i, chunk_size: float) -> Vector3:
+	var wx := chunk_coord.x * chunk_size + local_center.x
+	var wz := chunk_coord.y * chunk_size + local_center.z
+	var h := CityTerrainScript.sample_height(wx, wz)
+	return Vector3(local_center.x, h, local_center.z)
 
 static func _mat(color: Color, roughness: float) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
