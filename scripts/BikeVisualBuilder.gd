@@ -1,6 +1,12 @@
 extends Node3D
 
+const BikeRigScript := preload("res://scripts/BikeRig.gd")
+
 var _wheel_spin: float = 0.0
+var _wheel_radius: float = 0.44
+
+func get_wheel_radius() -> float:
+	return _wheel_radius
 
 func apply_config(config: Resource) -> void:
 	_clear_parts()
@@ -8,7 +14,16 @@ func apply_config(config: Resource) -> void:
 	var paint_color: Color = config.get("paint_color")
 	var frame_id: String = str(config.get("frame_id"))
 	var wheel_id: String = str(config.get("wheel_id"))
+	var fork_id: String = str(config.get("fork_id"))
+	if fork_id.is_empty():
+		fork_id = "trail_susp"
 	var handlebar_id: String = str(config.get("handlebar_id"))
+	var seat_id: String = str(config.get("seat_id"))
+	if seat_id.is_empty():
+		seat_id = "trail"
+	var pedal_id: String = str(config.get("pedal_id"))
+	if pedal_id.is_empty():
+		pedal_id = "platform"
 
 	var frame_mat := _make_material(paint_color, 0.55)
 	var metal_mat := _make_material(Color(0.16, 0.17, 0.18, 1.0), 0.2)
@@ -20,6 +35,7 @@ func apply_config(config: Resource) -> void:
 	var top_tube_drop: float = 0.02
 	var wheel_radius: float = 0.44
 	var tire_width: float = 0.07
+	_wheel_radius = wheel_radius
 
 	match frame_id:
 		"downhill":
@@ -28,6 +44,9 @@ func apply_config(config: Resource) -> void:
 		"enduro":
 			frame_height = 0.79
 			top_tube_drop = -0.03
+		"xc":
+			frame_height = 0.74
+			top_tube_drop = 0.06
 		_:
 			frame_height = 0.76
 
@@ -38,9 +57,13 @@ func apply_config(config: Resource) -> void:
 		"mtb_plus":
 			wheel_radius = 0.43
 			tire_width = 0.095
+		"gravel_700":
+			wheel_radius = 0.36
+			tire_width = 0.04
 		_:
 			wheel_radius = 0.44
 			tire_width = 0.07
+	_wheel_radius = wheel_radius
 
 	_add_tube(Vector3(0.0, frame_height + top_tube_drop, -0.38), Vector3(0.0, frame_height, 0.36), 0.045, frame_mat)
 	_add_tube(Vector3(0.0, frame_height, 0.36), Vector3(0.0, wheel_radius + 0.14, front_wheel_z - 0.04), 0.04, frame_mat)
@@ -48,15 +71,20 @@ func apply_config(config: Resource) -> void:
 	_add_tube(Vector3(0.0, wheel_radius + 0.1, rear_wheel_z + 0.08), Vector3(0.0, wheel_radius + 0.14, front_wheel_z - 0.04), 0.04, frame_mat)
 	_add_tube(Vector3(0.0, wheel_radius + 0.12, rear_wheel_z + 0.2), Vector3(0.0, frame_height + top_tube_drop, -0.24), 0.035, frame_mat)
 
-	_add_fork(front_wheel_z, wheel_radius, frame_mat, metal_mat)
+	_add_fork(front_wheel_z, wheel_radius, fork_id, frame_mat, metal_mat)
 	_add_rear_triangle(rear_wheel_z, wheel_radius, frame_mat)
 	_add_drivetrain(rear_wheel_z, metal_mat)
 	_add_cockpit(front_wheel_z, frame_height, handlebar_id, frame_mat, metal_mat)
 	_add_wheel("RearWheel", rear_wheel_z, wheel_radius, tire_width, metal_mat, rubber_mat)
 	_add_wheel("FrontWheel", front_wheel_z, wheel_radius, tire_width, metal_mat, rubber_mat)
-	_add_seat(frame_height, frame_mat, metal_mat)
-	_add_pedals(metal_mat)
+	_add_seat(frame_height, seat_id, frame_mat, metal_mat)
+	_add_pedals(pedal_id, metal_mat)
 	_add_seat_anchor(frame_height)
+
+func mount_rider(rider: Node3D) -> void:
+	var bike := get_parent()
+	if bike:
+		BikeRigScript.mount_rider_on_bike(bike, self, rider)
 
 func _add_wheel(name: String, wheel_z: float, wheel_radius: float, tire_width: float, rim_mat: Material, tire_mat: Material) -> void:
 	var tire := MeshInstance3D.new()
@@ -81,10 +109,24 @@ func _add_wheel(name: String, wheel_z: float, wheel_radius: float, tire_width: f
 	rim.material_override = rim_mat
 	add_child(rim)
 
-func _add_fork(front_wheel_z: float, wheel_radius: float, frame_mat: Material, metal_mat: Material) -> void:
-	_add_tube(Vector3(0.0, 0.94, front_wheel_z - 0.04), Vector3(0.0, wheel_radius + 0.15, front_wheel_z - 0.1), 0.03, frame_mat)
-	_add_tube(Vector3(-0.06, wheel_radius + 0.15, front_wheel_z - 0.1), Vector3(-0.06, wheel_radius + 0.02, front_wheel_z), 0.02, metal_mat)
-	_add_tube(Vector3(0.06, wheel_radius + 0.15, front_wheel_z - 0.1), Vector3(0.06, wheel_radius + 0.02, front_wheel_z), 0.02, metal_mat)
+func _add_fork(front_wheel_z: float, wheel_radius: float, fork_id: String, frame_mat: Material, metal_mat: Material) -> void:
+	var crown_y: float = 0.94
+	var leg_spread: float = 0.06
+	match fork_id:
+		"dh_susp":
+			crown_y = 0.98
+			leg_spread = 0.08
+			_add_tube(Vector3(0.0, crown_y - 0.08, front_wheel_z - 0.02), Vector3(0.0, wheel_radius + 0.22, front_wheel_z - 0.12), 0.045, metal_mat)
+		"trail_susp":
+			_add_tube(Vector3(0.0, crown_y - 0.05, front_wheel_z - 0.03), Vector3(0.0, wheel_radius + 0.18, front_wheel_z - 0.1), 0.035, metal_mat)
+		"rigid_carbon":
+			crown_y = 0.9
+		_:
+			pass
+
+	_add_tube(Vector3(0.0, crown_y, front_wheel_z - 0.04), Vector3(0.0, wheel_radius + 0.15, front_wheel_z - 0.1), 0.03, frame_mat)
+	_add_tube(Vector3(-leg_spread, wheel_radius + 0.15, front_wheel_z - 0.1), Vector3(-leg_spread, wheel_radius + 0.02, front_wheel_z), 0.02, metal_mat)
+	_add_tube(Vector3(leg_spread, wheel_radius + 0.15, front_wheel_z - 0.1), Vector3(leg_spread, wheel_radius + 0.02, front_wheel_z), 0.02, metal_mat)
 
 func _add_rear_triangle(rear_wheel_z: float, wheel_radius: float, frame_mat: Material) -> void:
 	_add_tube(Vector3(-0.05, wheel_radius + 0.14, rear_wheel_z + 0.15), Vector3(-0.05, wheel_radius + 0.02, rear_wheel_z), 0.02, frame_mat)
@@ -110,24 +152,45 @@ func _add_cockpit(front_wheel_z: float, frame_height: float, handlebar_id: Strin
 	match handlebar_id:
 		"dh_bar":
 			width = 0.82
+			rise = 0.12
 		"riser":
 			width = 0.76
 			rise = 0.08
+		"bmx":
+			width = 0.62
+			rise = 0.02
 		_:
 			width = 0.7
 	_add_tube(Vector3(-width * 0.5, frame_height + 0.22 + rise, front_wheel_z - 0.02), Vector3(width * 0.5, frame_height + 0.22 + rise, front_wheel_z - 0.02), 0.02, frame_mat)
 
-func _add_seat(frame_height: float, frame_mat: Material, metal_mat: Material) -> void:
+func _add_seat(frame_height: float, seat_id: String, frame_mat: Material, metal_mat: Material) -> void:
 	_add_tube(Vector3(0.0, frame_height + 0.02, -0.4), Vector3(0.0, frame_height + 0.2, -0.44), 0.022, metal_mat)
 	var seat := MeshInstance3D.new()
 	var seat_mesh := BoxMesh.new()
-	seat_mesh.size = Vector3(0.19, 0.05, 0.34)
+	match seat_id:
+		"dh":
+			seat_mesh.size = Vector3(0.22, 0.06, 0.28)
+		"comfort":
+			seat_mesh.size = Vector3(0.24, 0.07, 0.38)
+		"slim":
+			seat_mesh.size = Vector3(0.16, 0.04, 0.3)
+		_:
+			seat_mesh.size = Vector3(0.19, 0.05, 0.34)
 	seat.mesh = seat_mesh
 	seat.position = Vector3(0.0, frame_height + 0.22, -0.46)
 	seat.material_override = frame_mat
 	add_child(seat)
 
-func _add_pedals(metal_mat: Material) -> void:
+func _add_pedals(pedal_id: String, metal_mat: Material) -> void:
+	var pedal_size := Vector3(0.09, 0.03, 0.14)
+	match pedal_id:
+		"clipless":
+			pedal_size = Vector3(0.08, 0.04, 0.12)
+		"dh":
+			pedal_size = Vector3(0.11, 0.04, 0.16)
+		_:
+			pass
+
 	var crank_right := Node3D.new()
 	crank_right.name = "CrankRightPivot"
 	crank_right.position = Vector3(0.0, 0.42, -0.03)
@@ -145,7 +208,7 @@ func _add_pedals(metal_mat: Material) -> void:
 	var pedal_right := MeshInstance3D.new()
 	pedal_right.name = "PedalRight"
 	var pedal_mesh := BoxMesh.new()
-	pedal_mesh.size = Vector3(0.09, 0.03, 0.14)
+	pedal_mesh.size = pedal_size
 	pedal_right.mesh = pedal_mesh
 	pedal_right.position = Vector3(0.24, 0.0, 0.0)
 	pedal_right.material_override = metal_mat
@@ -216,5 +279,5 @@ func _set_pedal_phase(phase: float) -> void:
 func _add_seat_anchor(frame_height: float) -> void:
 	var anchor := Node3D.new()
 	anchor.name = "SeatAnchor"
-	anchor.position = Vector3(0.0, frame_height + 0.25, -0.47)
+	anchor.position = Vector3(0.0, frame_height + 0.22, -0.46)
 	add_child(anchor)

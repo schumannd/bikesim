@@ -56,6 +56,7 @@ func _create_chunk(chunk_coord: Vector2i, key: String) -> void:
 
 func _add_ground(parent: Node3D) -> void:
 	var ground_body := StaticBody3D.new()
+	ground_body.position = Vector3(0.0, -0.5, 0.0)
 	parent.add_child(ground_body)
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -66,7 +67,6 @@ func _add_ground(parent: Node3D) -> void:
 	var ground_mesh := BoxMesh.new()
 	ground_mesh.size = Vector3(chunk_size, 1.0, chunk_size)
 	mesh.mesh = ground_mesh
-	mesh.position = Vector3(0.0, -0.5, 0.0)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.18, 0.19, 0.2, 1.0)
 	mat.roughness = 1.0
@@ -79,7 +79,7 @@ func _add_roads(parent: Node3D) -> void:
 
 func _add_road(parent: Node3D, pos: Vector3, rotated: bool) -> void:
 	var road := StaticBody3D.new()
-	road.position = pos + Vector3(0.0, 0.06, 0.0)
+	road.position = pos + Vector3(0.0, -0.05, 0.0)
 	if rotated:
 		road.rotation.y = PI * 0.5
 	parent.add_child(road)

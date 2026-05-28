@@ -1,5 +1,7 @@
 extends CharacterBody3D
 
+const BikeRigScript := preload("res://scripts/BikeRig.gd")
+
 @export var acceleration: float = 18.0
 @export var max_speed: float = 30.0
 @export var brake_power: float = 20.0
@@ -7,7 +9,7 @@ extends CharacterBody3D
 @export var gravity: float = 18.0
 
 var speed: float = 0.0
-var reset_position: Vector3 = Vector3(0, 1.05, 0)
+var reset_position: Vector3 = BikeRigScript.ride_spawn_position()
 
 func _physics_process(delta: float) -> void:
 	var throttle := Input.get_action_strength("move_forward") - Input.get_action_strength("move_backward")
@@ -18,7 +20,6 @@ func _physics_process(delta: float) -> void:
 	if braking:
 		speed = move_toward(speed, 0.0, brake_power * delta)
 	elif abs(throttle) < 0.01:
-		# Rolling resistance so the bike naturally slows down.
 		speed = move_toward(speed, 0.0, 6.0 * delta)
 	speed = move_toward(speed, 0.0, abs(speed) * 0.18 * delta)
 	speed = clamp(speed, -max_speed * 0.3, max_speed)
@@ -30,10 +31,17 @@ func _physics_process(delta: float) -> void:
 	velocity.y -= gravity * delta
 	move_and_slide()
 
+	if BikeRigScript.should_reset_fall(global_position.y):
+		global_position = reset_position
+		basis = Basis.IDENTITY
+		velocity = Vector3.ZERO
+		speed = 0.0
+
 	if Input.is_action_just_pressed("quick_reset"):
 		global_position = reset_position
 		basis = Basis.IDENTITY
+		velocity = Vector3.ZERO
 		speed = 0.0
 
 func set_reset_position(pos: Vector3) -> void:
-	reset_position = pos
+	reset_position = BikeRigScript.ride_spawn_position(pos)

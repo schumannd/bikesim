@@ -1,6 +1,9 @@
 extends Control
 
+const BikeRigScript := preload("res://scripts/BikeRig.gd")
+
 @onready var bike: CharacterBody3D = $SubViewportContainer/SubViewport/World/Bike
+@onready var bike_collision: CollisionShape3D = $SubViewportContainer/SubViewport/World/Bike/CollisionShape3D
 @onready var speed_label: Label = $HUD/MarginContainer/VBoxContainer/SpeedLabel
 @onready var hint_label: Label = $HUD/MarginContainer/VBoxContainer/HintLabel
 @onready var mission_label: Label = $HUD/MarginContainer/VBoxContainer/MissionLabel
@@ -12,7 +15,7 @@ extends Control
 @onready var engine_audio: AudioStreamPlayer3D = $SubViewportContainer/SubViewport/World/Bike/EngineAudio
 @onready var world_root: Node3D = $SubViewportContainer/SubViewport/World
 
-var spawn_position: Vector3 = Vector3(0, 1.05, 0)
+var spawn_position: Vector3 = BikeRigScript.ride_spawn_position()
 var mission_step: int = 0
 var _garage_zone_active: bool = false
 var _pedal_phase: float = 0.0
@@ -22,7 +25,6 @@ func _ready() -> void:
 	_update_mission_text()
 	checkpoint_label.text = "Checkpoint: not reached"
 	_apply_visuals()
-	bike.call("set_reset_position", spawn_position)
 	checkpoint.body_entered.connect(_on_checkpoint_body_entered)
 	if world_root.has_signal("garage_zone_created"):
 		world_root.garage_zone_created.connect(_on_garage_zone_created)
@@ -48,16 +50,21 @@ func _physics_process(_delta: float) -> void:
 	_pedal_phase += abs((bike as Node).get("speed")) * _delta * 0.9
 	bike_visual.call("animate_drive", (bike as Node).get("speed"), _delta)
 	rider_visual.call("animate_pedaling", _pedal_phase, normalized_speed)
-	_snap_rider_to_seat()
 
 func _apply_visuals() -> void:
 	bike_visual.call("apply_config", GameState.bike_config)
 	rider_visual.call("apply_config", GameState.character_config)
-	_snap_rider_to_seat()
+	bike_visual.call("mount_rider", rider_visual)
+
+	var wheel_radius: float = bike_visual.call("get_wheel_radius")
+	bike.position = BikeRigScript.ride_spawn_position(bike.position)
+	bike_collision.position.y = BikeRigScript.collision_shape_y(wheel_radius)
+	spawn_position = BikeRigScript.ride_spawn_position(spawn_position)
+	bike.call("set_reset_position", spawn_position)
 
 func _on_checkpoint_body_entered(body: Node3D) -> void:
 	if body == bike:
-		spawn_position = bike.global_position + Vector3.UP * 0.2
+		spawn_position = BikeRigScript.ride_spawn_position(bike.global_position)
 		bike.call("set_reset_position", spawn_position)
 		checkpoint_label.text = "Checkpoint: reached"
 		_complete_mission_step(2)
@@ -87,12 +94,6 @@ func _update_minimap_marker() -> void:
 	var x: float = clamp(local_x, 0.0, 1.0)
 	var y: float = clamp(local_y, 0.0, 1.0)
 	minimap_marker.position = Vector2(x * map_size.x - 4.0, y * map_size.y - 4.0)
-
-func _snap_rider_to_seat() -> void:
-	var seat_anchor: Node = bike_visual.get_node_or_null("SeatAnchor")
-	if seat_anchor and seat_anchor is Node3D:
-		# Rider model origin is near pelvis; offset to seat exactly.
-		rider_visual.position = (seat_anchor as Node3D).position + Vector3(0.0, -0.73, 0.0)
 
 func _connect_existing_garage_zones() -> void:
 	for node in world_root.get_children():

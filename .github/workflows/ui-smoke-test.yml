@@ -8,6 +8,7 @@ on:
 jobs:
   ui-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,4 +23,7 @@ jobs:
           sudo mv Godot_v4.6-stable_linux.x86_64 /usr/local/bin/godot
 
       - name: Run UI smoke test
+        timeout-minutes: 1
+        env:
+          UI_SMOKE_TIMEOUT_SECONDS: 30
         run: ./scripts/ci/run_ui_smoke_test.sh

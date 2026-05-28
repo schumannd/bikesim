@@ -26,5 +26,5 @@ Tracks issues reported in chat and their fix status.
 - [x] Character still floating + cleanup requested for prior floating/fall fixes.
   - Fix: replaced rider offset tweaks with bike `SeatAnchor` attachment and simplified chunk streaming to one clean radius-based system (removed layered look-ahead/unload logic).
 
-- [ ] Rider and bike still visually floating after anchor cleanup.
-  - Planned fix: align ride-scene physics origin and visual origin explicitly (`BikeVisual` offset under body), then seat rider pelvis-to-anchor offset.
+- [x] Rider and bike still visually floating after anchor cleanup.
+  - Fix: consolidated placement into `scripts/BikeRig.gd` (single surface `y=0`, one rider mount, one fall reset). Removed per-frame snap/align hacks from `RideScene.gd`.

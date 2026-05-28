@@ -183,14 +183,13 @@ mesh = SubResource("17_buildingmesh")
 material_override = SubResource("19_buildingmat")
 
 [node name="Bike" type="CharacterBody3D" parent="SubViewportContainer/SubViewport/World"]
-position = Vector3(0, 1.05, 0)
 script = ExtResource("2_bike")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="SubViewportContainer/SubViewport/World/Bike"]
+position = Vector3(0, 0.6, 0)
 shape = SubResource("4_bikeshape")
 
 [node name="BikeVisual" type="Node3D" parent="SubViewportContainer/SubViewport/World/Bike"]
-position = Vector3(0, -1.05, 0)
 script = ExtResource("5_bikevisual")
 
 [node name="FrameTop" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Bike/BikeVisual"]

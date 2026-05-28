@@ -1,16 +1,7 @@
 # BikeSim
 
-PC-first 3D bicycle building and riding simulator prototype in Godot 4.
+3D bicycle building and riding simulator prototype in Godot 4.
 
-## MVP Implemented
-
-- Ride a bike in a 3D open area with keyboard/controller controls.
-- Garage customization for frame, wheels, handlebars, and paint color.
-- Character customization for outfit, hair style, and colors.
-- Save/load for bike + character setup (`user://savegame.json`).
-- Tutorial mission steps and checkpoint progression in riding scene.
-- Minimap placeholder panel with live rider marker.
-- Scene flow: ride <-> garage <-> character customization.
 
 ## Controls (Default)
 
@@ -48,6 +39,7 @@ PC-first 3D bicycle building and riding simulator prototype in Godot 4.
 
 - Local smoke test:
   - `./scripts/ci/run_ui_smoke_test.sh`
+  - Default timeout is `30s` (override with `UI_SMOKE_TIMEOUT_SECONDS=45`).
 - What it validates:
   - Game launches through `Main.tscn`
   - Initial ride screen is loaded
