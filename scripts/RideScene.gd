@@ -87,6 +87,8 @@ func _apply_exit_spawns_if_pending() -> void:
 
 func _on_checkpoint_body_entered(body: Node3D) -> void:
 	if body == bike:
+		if checkpoint.has_method("mark_reached"):
+			checkpoint.call("mark_reached")
 		spawn_position = BikeRigScript.ride_spawn_position(bike.global_position)
 		bike.call("set_reset_position", spawn_position)
 		checkpoint_label.text = "Checkpoint: reached"
