@@ -4,6 +4,9 @@ extends Control
 @onready var quality_option: OptionButton = $Panel/Margin/VBox/QualityOption
 
 func _ready() -> void:
+	SoundEffects.wire_menu_buttons(self)
+	SoundEffects.wire_option_button(fps_option)
+	SoundEffects.wire_option_button(quality_option)
 	_populate_options()
 	_apply_state_to_ui()
 

@@ -22,6 +22,7 @@ const PREVIEW_BIKE_X := 3.2
 @onready var viewport_container: SubViewportContainer = $PreviewPanel/SubViewportContainer
 
 func _ready() -> void:
+	SoundEffects.wire_menu_buttons(self)
 	_style_menu()
 	_setup_preview_camera()
 	for slot in range(slot_buttons.size()):

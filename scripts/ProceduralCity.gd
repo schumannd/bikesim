@@ -119,6 +119,7 @@ func _sync_global_terrain_position() -> void:
 func _add_ground(parent: Node3D) -> void:
 	# Flat ride collision at road height — terrain mesh stays lower for visuals only.
 	var ground_body := StaticBody3D.new()
+	ground_body.name = "RideSurface"
 	var ride_y: float = BikeRigScript.RIDE_SURFACE_Y
 	ground_body.position = Vector3(0.0, ride_y - 0.5, 0.0)
 	parent.add_child(ground_body)

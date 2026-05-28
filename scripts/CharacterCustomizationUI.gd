@@ -22,6 +22,9 @@ const PREVIEW_CENTER_X := 3.2
 var _preview_spin: float = 0.0
 
 func _ready() -> void:
+	SoundEffects.wire_menu_buttons(self)
+	SoundEffects.wire_option_button(outfit_option)
+	SoundEffects.wire_option_button(hair_option)
 	_style_panels()
 	_setup_preview_camera()
 	_populate_options()

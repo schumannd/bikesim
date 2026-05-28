@@ -101,6 +101,7 @@ var _paint_finish_indices: Dictionary = {
 var _color_swatch_panels: Array[PanelContainer] = []
 
 func _ready() -> void:
+	SoundEffects.wire_menu_buttons(self)
 	_style_panels()
 	_style_leave_button()
 	for paint_category: String in ["paint_frame", "paint_fork", "paint_rim", "paint_handlebar", "paint_seat"]:
@@ -184,6 +185,7 @@ func _build_color_swatches() -> void:
 func _on_swatch_gui_input(event: InputEvent, color_index: int) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_select_paint_color_index(_categories[_category_index], color_index)
+		SoundEffects.play_menu_move()
 
 func _build_menu() -> void:
 	for child in menu_list.get_children():
@@ -206,32 +208,40 @@ func _unhandled_input(event: InputEvent) -> void:
 	match event.keycode:
 		KEY_W, KEY_UP:
 			_category_index = posmod(_category_index - 1, _categories.size())
+			SoundEffects.play_menu_move()
 			_update_ui()
 		KEY_S, KEY_DOWN:
 			_category_index = posmod(_category_index + 1, _categories.size())
+			SoundEffects.play_menu_move()
 			_update_ui()
 		KEY_A, KEY_LEFT:
 			if _is_paint_category(category):
 				_step_paint_color(category, -1)
 			else:
 				_step_option(-1)
+			SoundEffects.play_menu_move()
 		KEY_D, KEY_RIGHT:
 			if _is_paint_category(category):
 				_step_paint_color(category, 1)
 			else:
 				_step_option(1)
+			SoundEffects.play_menu_move()
 		KEY_Q:
 			if _is_paint_category(category):
 				_step_paint_finish(category, -1)
+				SoundEffects.play_menu_move()
 		KEY_E:
 			if _is_paint_category(category):
 				_step_paint_finish(category, 1)
+				SoundEffects.play_menu_move()
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_0:
 			if _is_paint_category(category):
 				var digit := _keycode_to_color_index(event.keycode)
 				if digit >= 0:
 					_select_paint_color_index(category, digit)
+					SoundEffects.play_menu_move()
 		KEY_ENTER, KEY_KP_ENTER:
+			SoundEffects.play_menu_confirm()
 			_on_leave_garage_pressed()
 		KEY_ESCAPE:
 			_on_cancel_pressed()

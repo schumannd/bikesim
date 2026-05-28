@@ -14,6 +14,7 @@ const BikeRigScript := preload("res://scripts/BikeRig.gd")
 var speed: float = 0.0
 var reset_position: Vector3 = BikeRigScript.ride_spawn_position()
 var _wheel_radius: float = 0.44
+var _wall_hit_cooldown: float = 0.0
 
 func _ready() -> void:
 	floor_snap_length = 0.35
@@ -44,6 +45,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= gravity * delta
 	_try_step_up(forward)
 	move_and_slide()
+	_handle_impact_sounds(braking)
 
 	if BikeRigScript.should_reset_fall(global_position.y):
 		global_position = reset_position
@@ -95,3 +97,34 @@ func _try_step_up(forward: Vector3) -> void:
 		return
 	global_position.y += rise + 0.03
 	velocity.y = maxf(velocity.y, 0.0)
+
+func _handle_impact_sounds(braking: bool) -> void:
+	var brake_power := 0.0
+	if braking and absf(speed) > 0.8:
+		brake_power = clampf(absf(speed) / max_speed, 0.0, 1.0)
+	SoundEffects.set_brake_active(brake_power > 0.05, brake_power)
+
+	if _wall_hit_cooldown > 0.0:
+		_wall_hit_cooldown = maxf(_wall_hit_cooldown - get_physics_process_delta_time(), 0.0)
+		return
+
+	var impact := 0.0
+	for i in get_slide_collision_count():
+		var collision := get_slide_collision(i)
+		var normal := collision.get_normal()
+		if absf(normal.y) > 0.45:
+			continue
+		var collider := collision.get_collider()
+		if collider == null or not (collider is StaticBody3D):
+			continue
+		var body := collider as StaticBody3D
+		if _is_ride_surface(body):
+			continue
+		impact = maxf(impact, absf(speed) / max_speed)
+
+	if impact > 0.18:
+		SoundEffects.play_wall_hit(impact)
+		_wall_hit_cooldown = 0.14
+
+func _is_ride_surface(body: StaticBody3D) -> bool:
+	return body.name in ["RideSurface", "Floor", "ApproachPad"]
