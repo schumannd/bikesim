@@ -7,6 +7,7 @@ extends Control
 @onready var checkpoint_label: Label = $HUD/MarginContainer/VBoxContainer/CheckpointLabel
 @onready var minimap_marker: ColorRect = $HUD/MinimapPanel/Marker
 @onready var rider_mesh: MeshInstance3D = $SubViewportContainer/SubViewport/World/Bike/RiderMesh
+@onready var bike_visual: Node3D = $SubViewportContainer/SubViewport/World/Bike/BikeVisual
 @onready var checkpoint: Area3D = $SubViewportContainer/SubViewport/World/CheckpointA
 @onready var engine_audio: AudioStreamPlayer3D = $SubViewportContainer/SubViewport/World/Bike/EngineAudio
 
@@ -38,17 +39,18 @@ func _physics_process(_delta: float) -> void:
 	engine_audio.volume_db = lerp(-18.0, -4.0, normalized_speed)
 
 func _apply_visuals() -> void:
-	var bike_mesh: MeshInstance3D = $SubViewportContainer/SubViewport/World/Bike/BikeMesh
-	var bike_material := StandardMaterial3D.new()
+	var bike_material: StandardMaterial3D = StandardMaterial3D.new()
 	bike_material.albedo_color = GameState.bike_config.paint_color
-	bike_mesh.material_override = bike_material
+	for child: Node in bike_visual.get_children():
+		if child is MeshInstance3D:
+			(child as MeshInstance3D).material_override = bike_material
 	match GameState.bike_config.frame_id:
 		"bmx":
-			bike_mesh.scale = Vector3(0.85, 0.85, 0.85)
+			bike_visual.scale = Vector3(0.86, 0.86, 0.86)
 		"road":
-			bike_mesh.scale = Vector3(0.95, 0.75, 1.1)
+			bike_visual.scale = Vector3(1.05, 0.92, 1.08)
 		_:
-			bike_mesh.scale = Vector3.ONE
+			bike_visual.scale = Vector3.ONE
 
 	var rider_material := StandardMaterial3D.new()
 	rider_material.albedo_color = GameState.character_config.outfit_color
