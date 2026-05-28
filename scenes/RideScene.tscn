@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=24 format=3]
 
 [ext_resource type="Script" path="res://scripts/RideScene.gd" id="1_ride"]
 [ext_resource type="Script" path="res://scripts/BikeController.gd" id="2_bike"]
@@ -7,7 +7,7 @@
 [ext_resource type="Script" path="res://scripts/BikeVisualBuilder.gd" id="5_bikevisual"]
 [ext_resource type="Script" path="res://scripts/RiderVisualBuilder.gd" id="6_ridervisual"]
 [ext_resource type="Script" path="res://scripts/MinimapHUD.gd" id="7_minimap"]
-[ext_resource type="Script" path="res://scripts/CheckpointMarker.gd" id="8_checkpointmarker"]
+[ext_resource type="Script" path="res://scripts/QuestController.gd" id="9_quest"]
 
 [sub_resource type="BoxMesh" id="1_groundmesh"]
 size = Vector3(200, 1, 200)
@@ -25,9 +25,6 @@ height = 1.2
 [sub_resource type="CapsuleMesh" id="5_ridermesh"]
 radius = 0.3
 mid_height = 1.0
-
-[sub_resource type="SphereShape3D" id="6_checkpointshape"]
-radius = 2.8
 
 [sub_resource type="BoxMesh" id="7_roadmesh"]
 size = Vector3(12, 0.1, 120)
@@ -249,15 +246,24 @@ follow_distance = 3.8
 follow_height = 2.0
 look_at_height = 1.15
 
-[node name="CheckpointA" type="Area3D" parent="SubViewportContainer/SubViewport/World"]
-position = Vector3(24, 0, -10)
-script = ExtResource("8_checkpointmarker")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SubViewportContainer/SubViewport/World/CheckpointA"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
-shape = SubResource("6_checkpointshape")
+[node name="QuestController" type="Node3D" parent="SubViewportContainer/SubViewport/World"]
+script = ExtResource("9_quest")
+bike_path = NodePath("../Bike")
 
 [node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="MoneyLabel" type="Label" parent="HUD"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -220.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 48.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 24
+text = "$0.20"
+horizontal_alignment = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="HUD"]
 offset_left = 16.0

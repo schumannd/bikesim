@@ -9,8 +9,16 @@
 - `A/D`: steer
 - `Space`: brake
 - `R`: quick reset to latest spawn/checkpoint
+- `E`: interact (start quest at golden marker)
 - `G`: open garage
 - `C`: open character customization
+
+## Quest
+
+- Ride to the **golden mist** quest giver (NPC) and press **E** to start.
+- Follow the **blue checkpoints**; a large arrow points to the next one.
+- The **checkered finish** checkpoint completes the quest and pays **$2.00**.
+- You start with **$0.20** (shown top-right).
 
 ## World
 

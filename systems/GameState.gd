@@ -15,6 +15,12 @@ var wizard_exit_spawn: Vector3 = Vector3.ZERO
 var wizard_tower_world_position: Vector3 = Vector3.ZERO
 var character_edit_context: String = "ride"
 var is_new_game_setup: bool = false
+var money: float = 0.2
+var quest_active: bool = false
+var quest_stage: int = 0
+var quest_completed: bool = false
+
+const STARTING_MONEY := 0.2
 
 func queue_garage_exit() -> void:
 	pending_garage_exit = true
@@ -70,6 +76,18 @@ func reset_to_defaults() -> void:
 	bike_config = BikeConfigResource.new()
 	character_config = CharacterConfigResource.new()
 	world_seed = randi()
+	money = STARTING_MONEY
+	quest_active = false
+	quest_stage = 0
+	quest_completed = false
+
+func add_money(amount: float) -> void:
+	money += amount
+	if money < 0.0:
+		money = 0.0
+
+func format_money() -> String:
+	return "$%.2f" % money
 
 func start_new_game(slot: int) -> void:
 	active_slot = slot
@@ -96,6 +114,10 @@ func load_slot(slot: int) -> bool:
 		character_config.from_dict(data["character"])
 	if data.has("world_seed"):
 		world_seed = int(data["world_seed"])
+	money = float(data.get("money", STARTING_MONEY))
+	quest_active = bool(data.get("quest_active", false))
+	quest_stage = int(data.get("quest_stage", 0))
+	quest_completed = bool(data.get("quest_completed", false))
 	return true
 
 func first_empty_slot() -> int:
@@ -140,5 +162,9 @@ func persist() -> void:
 	SaveSystem.save_slot(active_slot, {
 		"bike": bike_config.to_dict(),
 		"character": character_config.to_dict(),
-		"world_seed": world_seed
+		"world_seed": world_seed,
+		"money": money,
+		"quest_active": quest_active,
+		"quest_stage": quest_stage,
+		"quest_completed": quest_completed
 	})

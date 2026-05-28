@@ -5,15 +5,16 @@ const BikeRigScript := preload("res://scripts/BikeRig.gd")
 @onready var bike: CharacterBody3D = $SubViewportContainer/SubViewport/World/Bike
 @onready var bike_collision: CollisionShape3D = $SubViewportContainer/SubViewport/World/Bike/CollisionShape3D
 @onready var speed_label: Label = $HUD/MarginContainer/VBoxContainer/SpeedLabel
+@onready var money_label: Label = $HUD/MoneyLabel
 @onready var hint_label: Label = $HUD/MarginContainer/VBoxContainer/HintLabel
 @onready var mission_label: Label = $HUD/MarginContainer/VBoxContainer/MissionLabel
 @onready var checkpoint_label: Label = $HUD/MarginContainer/VBoxContainer/CheckpointLabel
 @onready var minimap: Panel = $HUD/MinimapPanel
 @onready var rider_visual: Node3D = $SubViewportContainer/SubViewport/World/Bike/RiderVisual
 @onready var bike_visual: Node3D = $SubViewportContainer/SubViewport/World/Bike/BikeVisual
-@onready var checkpoint: Area3D = $SubViewportContainer/SubViewport/World/CheckpointA
 @onready var engine_audio: AudioStreamPlayer3D = $SubViewportContainer/SubViewport/World/Bike/EngineAudio
 @onready var world_root: Node3D = $SubViewportContainer/SubViewport/World
+@onready var quest_controller: Node3D = $SubViewportContainer/SubViewport/World/QuestController
 
 var spawn_position: Vector3 = BikeRigScript.ride_spawn_position()
 var mission_step: int = 0
@@ -25,12 +26,14 @@ var _garage_auto_enter_block_until: float = 0.0
 var _wizard_auto_enter_block_until: float = 0.0
 
 func _ready() -> void:
-	hint_label.text = "Garage (orange) & rare purple wizard tower — ride in to customize | G: garage | C: character | R: reset"
+	hint_label.text = "Golden quest marker: press E | Garage: G | Character: C | Reset: R"
 	_update_mission_text()
-	checkpoint_label.text = "Checkpoint: not reached"
+	_update_money_label()
+	_update_quest_labels()
 	_apply_visuals()
 	_setup_minimap()
-	checkpoint.body_entered.connect(_on_checkpoint_body_entered)
+	if quest_controller.has_signal("quest_state_changed"):
+		quest_controller.quest_state_changed.connect(_on_quest_state_changed)
 	if world_root.has_signal("garage_zone_created"):
 		world_root.garage_zone_created.connect(_on_garage_zone_created)
 	if world_root.has_signal("wizard_tower_zone_created"):
@@ -47,6 +50,10 @@ func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("open_character_customization"):
 		_complete_mission_step(1)
 		get_tree().root.get_node("Main").show_character_customization("ride")
+	if Input.is_action_just_pressed("interact"):
+		if quest_controller.has_method("try_interact"):
+			quest_controller.call("try_interact")
+	_update_quest_labels()
 
 func _physics_process(_delta: float) -> void:
 	var normalized_speed: float = clamp(abs((bike as Node).get("speed")) / 30.0, 0.0, 1.0)
@@ -85,25 +92,38 @@ func _apply_exit_spawns_if_pending() -> void:
 	bike.call("set_reset_position", spawn_position)
 	_refresh_minimap_pois()
 
-func _on_checkpoint_body_entered(body: Node3D) -> void:
-	if body == bike:
-		if checkpoint.has_method("mark_reached"):
-			checkpoint.call("mark_reached")
-		spawn_position = BikeRigScript.ride_spawn_position(bike.global_position)
-		bike.call("set_reset_position", spawn_position)
-		checkpoint_label.text = "Checkpoint: reached"
-		_complete_mission_step(2)
+func _on_quest_state_changed() -> void:
+	_update_money_label()
+	_update_quest_labels()
+	_refresh_minimap_pois()
+
+func _update_money_label() -> void:
+	money_label.text = GameState.format_money()
+
+func _update_quest_labels() -> void:
+	if quest_controller.has_method("get_quest_status_text"):
+		mission_label.text = quest_controller.call("get_quest_status_text")
+	if GameState.quest_active:
+		checkpoint_label.text = "Follow the arrow to the next checkpoint"
+	elif GameState.quest_completed:
+		checkpoint_label.text = "Quest finished — $2.00 earned"
+	else:
+		checkpoint_label.text = "Press E at the golden mist to start the quest"
 
 func _update_mission_text() -> void:
+	if GameState.quest_completed:
+		mission_label.text = "Quest complete — explore freely"
+		return
 	match mission_step:
 		0:
 			mission_label.text = "Tutorial: Enter the garage (ride in or press G)."
 		1:
 			mission_label.text = "Tutorial: Edit character (C) or find the purple wizard tower."
-		2:
-			mission_label.text = "Tutorial: Reach checkpoint marker."
 		_:
-			mission_label.text = "Tutorial complete. Ride freely."
+			if quest_controller.has_method("get_quest_status_text"):
+				mission_label.text = quest_controller.call("get_quest_status_text")
+			else:
+				mission_label.text = "Ride freely."
 
 func _complete_mission_step(required_step: int) -> void:
 	if mission_step != required_step:
@@ -121,16 +141,24 @@ func _setup_minimap() -> void:
 			"color": Color(1.0, 0.55, 0.08, 1.0)
 		},
 		{
-			"id": "checkpoint",
-			"world_position": checkpoint.global_position,
-			"color": Color(0.2, 0.85, 1.0, 1.0)
-		},
-		{
 			"id": "spawn",
 			"world_position": spawn_position,
 			"color": Color(0.75, 0.75, 0.75, 1.0)
 		}
 	]
+	if not GameState.quest_completed:
+		var quest_pos: Vector3 = Vector3.INF
+		if quest_controller.has_method("get_active_quest_position"):
+			quest_pos = quest_controller.call("get_active_quest_position")
+		if quest_pos != Vector3.INF:
+			var quest_color := Color(1.0, 0.82, 0.2, 1.0)
+			if GameState.quest_active:
+				quest_color = Color(0.2, 0.85, 1.0, 1.0)
+			pois.append({
+				"id": "quest",
+				"world_position": quest_pos,
+				"color": quest_color
+			})
 	if _has_wizard_tower_poi:
 		pois.append({
 			"id": "wizard",
@@ -160,6 +188,7 @@ func _on_garage_zone_created(zone: Area3D) -> void:
 	_refresh_minimap_pois()
 	if not zone.body_entered.is_connected(_on_garage_zone_body_entered):
 		zone.body_entered.connect(_on_garage_zone_body_entered)
+
 func _on_garage_zone_body_entered(body: Node3D) -> void:
 	if body == bike:
 		_enter_garage()

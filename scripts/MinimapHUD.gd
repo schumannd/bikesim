@@ -69,7 +69,7 @@ func _build_nodes() -> void:
 	_legend.offset_right = MAP_INSET + MAP_SIZE - 4.0
 	_legend.offset_bottom = MAP_INSET + MAP_SIZE - 4.0
 	_legend.add_theme_font_size_override("font_size", 10)
-	_legend.text = "You (center)\nOrange = Garage\nPurple = Wizard tower\nCyan = Checkpoint"
+	_legend.text = "You (center)\nOrange = Garage\nGold = Quest\nCyan = Checkpoint\nPurple = Wizard"
 	add_child(_legend)
 
 func _rebuild_poi_nodes() -> void:
