@@ -10,29 +10,29 @@ func apply_config(config: Resource) -> void:
 	var cloth_mat := _make_material(outfit_color, 0.98)
 	var dark_mat := _make_material(Color(0.08, 0.08, 0.08, 1.0), 0.9)
 
-	_add_capsule("Torso", Vector3(0.0, 1.26, 0.16), 0.2, 0.46, cloth_mat)
-	_add_capsule("Hips", Vector3(0.0, 0.95, 0.14), 0.18, 0.25, cloth_mat)
-	_add_sphere("Head", Vector3(0.0, 1.63, 0.23), 0.15, skin_mat)
+	_add_capsule("Torso", Vector3(0.0, 0.92, 0.08), 0.18, 0.4, cloth_mat)
+	_add_capsule("Hips", Vector3(0.0, 0.73, 0.04), 0.17, 0.22, cloth_mat)
+	_add_sphere("Head", Vector3(0.0, 1.2, 0.14), 0.14, skin_mat)
 
-	_add_capsule("UpperArmL", Vector3(-0.2, 1.32, 0.48), 0.07, 0.25, cloth_mat, Vector3(0.2, 0.0, 0.65))
-	_add_capsule("UpperArmR", Vector3(0.2, 1.32, 0.48), 0.07, 0.25, cloth_mat, Vector3(0.2, 0.0, -0.65))
-	_add_capsule("ForearmL", Vector3(-0.24, 1.07, 0.55), 0.06, 0.23, skin_mat, Vector3(0.75, 0.0, 0.35))
-	_add_capsule("ForearmR", Vector3(0.24, 1.07, 0.55), 0.06, 0.23, skin_mat, Vector3(0.75, 0.0, -0.35))
+	_add_capsule("UpperArmL", Vector3(-0.19, 0.98, 0.38), 0.06, 0.23, cloth_mat, Vector3(0.25, 0.0, 0.62))
+	_add_capsule("UpperArmR", Vector3(0.19, 0.98, 0.38), 0.06, 0.23, cloth_mat, Vector3(0.25, 0.0, -0.62))
+	_add_capsule("ForearmL", Vector3(-0.24, 0.78, 0.48), 0.055, 0.2, skin_mat, Vector3(0.72, 0.0, 0.32))
+	_add_capsule("ForearmR", Vector3(0.24, 0.78, 0.48), 0.055, 0.2, skin_mat, Vector3(0.72, 0.0, -0.32))
 
-	_add_capsule("ThighL", Vector3(-0.12, 0.74, 0.08), 0.085, 0.34, cloth_mat, Vector3(0.95, 0.0, 0.22))
-	_add_capsule("ThighR", Vector3(0.12, 0.74, 0.08), 0.085, 0.34, cloth_mat, Vector3(0.95, 0.0, -0.22))
-	_add_capsule("CalfL", Vector3(-0.12, 0.43, 0.06), 0.07, 0.32, cloth_mat, Vector3(0.28, 0.0, 0.08))
-	_add_capsule("CalfR", Vector3(0.12, 0.43, 0.06), 0.07, 0.32, cloth_mat, Vector3(0.28, 0.0, -0.08))
-	_add_box("FootL", Vector3(-0.12, 0.2, 0.0), Vector3(0.11, 0.05, 0.2), dark_mat)
-	_add_box("FootR", Vector3(0.12, 0.2, 0.0), Vector3(0.11, 0.05, 0.2), dark_mat)
+	_add_capsule("ThighL", Vector3(-0.11, 0.62, 0.16), 0.08, 0.28, cloth_mat, Vector3(1.05, 0.0, 0.18))
+	_add_capsule("ThighR", Vector3(0.11, 0.62, 0.16), 0.08, 0.28, cloth_mat, Vector3(1.05, 0.0, -0.18))
+	_add_capsule("CalfL", Vector3(-0.12, 0.46, 0.0), 0.065, 0.24, cloth_mat, Vector3(0.36, 0.0, 0.05))
+	_add_capsule("CalfR", Vector3(0.12, 0.46, 0.0), 0.065, 0.24, cloth_mat, Vector3(0.36, 0.0, -0.05))
+	_add_box("FootL", Vector3(-0.12, 0.34, -0.05), Vector3(0.11, 0.05, 0.2), dark_mat)
+	_add_box("FootR", Vector3(0.12, 0.34, -0.05), Vector3(0.11, 0.05, 0.2), dark_mat)
 
 	match hair_style:
 		"helmet":
-			_add_sphere("Helmet", Vector3(0.0, 1.72, 0.23), 0.17, dark_mat)
+			_add_sphere("Helmet", Vector3(0.0, 1.28, 0.14), 0.16, dark_mat)
 		"long":
-			_add_box("HairLong", Vector3(0.0, 1.54, 0.08), Vector3(0.17, 0.2, 0.08), _make_material(Color(0.18, 0.09, 0.04, 1.0), 0.9))
+			_add_box("HairLong", Vector3(0.0, 1.12, 0.02), Vector3(0.16, 0.18, 0.08), _make_material(Color(0.18, 0.09, 0.04, 1.0), 0.9))
 		_:
-			_add_box("HairShort", Vector3(0.0, 1.75, 0.23), Vector3(0.18, 0.06, 0.16), _make_material(Color(0.18, 0.09, 0.04, 1.0), 0.9))
+			_add_box("HairShort", Vector3(0.0, 1.33, 0.14), Vector3(0.18, 0.06, 0.16), _make_material(Color(0.18, 0.09, 0.04, 1.0), 0.9))
 
 func _add_capsule(name: String, pos: Vector3, radius: float, height: float, mat: Material, rot: Vector3 = Vector3.ZERO) -> void:
 	var node := MeshInstance3D.new()
