@@ -15,6 +15,8 @@ const BIKE_SHOWROOM_X := 3.2
 @onready var selection_label: Label = $MenuPanel/Margin/VBox/DetailBox/SelectionLabel
 @onready var value_label: Label = $MenuPanel/Margin/VBox/DetailBox/ValueLabel
 @onready var hint_label: Label = $MenuPanel/Margin/VBox/DetailBox/HintLabel
+@onready var paint_picker: VBoxContainer = $MenuPanel/Margin/VBox/DetailBox/PaintPicker
+@onready var color_grid: GridContainer = $MenuPanel/Margin/VBox/DetailBox/PaintPicker/ColorGrid
 @onready var leave_garage_button: Button = $MenuPanel/Margin/VBox/LeaveGarageButton
 @onready var cancel_button: Button = $MenuPanel/Margin/VBox/ButtonRow/CancelButton
 @onready var viewport_container: SubViewportContainer = $ViewportPanel/SubViewportContainer
@@ -96,12 +98,14 @@ var _paint_finish_indices: Dictionary = {
 	"paint_handlebar": 0,
 	"paint_seat": 0
 }
+var _color_swatch_panels: Array[PanelContainer] = []
 
 func _ready() -> void:
 	_style_panels()
 	_style_leave_button()
 	for paint_category: String in ["paint_frame", "paint_fork", "paint_rim", "paint_handlebar", "paint_seat"]:
 		_part_options[paint_category] = BikePaintLibraryScript.color_presets()
+	_build_color_swatches()
 	_build_menu()
 	_setup_showroom_camera()
 	_init_preview_config()
@@ -153,6 +157,34 @@ func _setup_showroom_camera() -> void:
 	showroom_camera.look_at(look_target, Vector3.UP)
 	showroom_camera.fov = 36.0
 
+func _build_color_swatches() -> void:
+	for child in color_grid.get_children():
+		child.queue_free()
+	_color_swatch_panels.clear()
+
+	var presets: Array = BikePaintLibraryScript.color_presets()
+	for i in range(presets.size()):
+		var preset: Dictionary = presets[i]
+		var swatch := PanelContainer.new()
+		swatch.name = "Swatch_%d" % i
+		swatch.custom_minimum_size = Vector2(30, 30)
+		swatch.tooltip_text = str(preset["label"])
+		swatch.mouse_filter = Control.MOUSE_FILTER_STOP
+		swatch.gui_input.connect(_on_swatch_gui_input.bind(i))
+
+		var style := StyleBoxFlat.new()
+		style.bg_color = preset["color"]
+		style.set_border_width_all(2)
+		style.border_color = Color(0.2, 0.2, 0.22, 1.0)
+		style.set_corner_radius_all(4)
+		swatch.add_theme_stylebox_override("panel", style)
+		color_grid.add_child(swatch)
+		_color_swatch_panels.append(swatch)
+
+func _on_swatch_gui_input(event: InputEvent, color_index: int) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_select_paint_color_index(_categories[_category_index], color_index)
+
 func _build_menu() -> void:
 	for child in menu_list.get_children():
 		child.queue_free()
@@ -180,20 +212,25 @@ func _unhandled_input(event: InputEvent) -> void:
 			_update_ui()
 		KEY_A, KEY_LEFT:
 			if _is_paint_category(category):
-				_step_paint_finish(category, -1)
+				_step_paint_color(category, -1)
 			else:
 				_step_option(-1)
 		KEY_D, KEY_RIGHT:
 			if _is_paint_category(category):
-				_step_paint_finish(category, 1)
+				_step_paint_color(category, 1)
 			else:
 				_step_option(1)
 		KEY_Q:
 			if _is_paint_category(category):
-				_step_paint_color(category, -1)
+				_step_paint_finish(category, -1)
 		KEY_E:
 			if _is_paint_category(category):
-				_step_paint_color(category, 1)
+				_step_paint_finish(category, 1)
+		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_0:
+			if _is_paint_category(category):
+				var digit := _keycode_to_color_index(event.keycode)
+				if digit >= 0:
+					_select_paint_color_index(category, digit)
 		KEY_ENTER, KEY_KP_ENTER:
 			_on_leave_garage_pressed()
 		KEY_ESCAPE:
@@ -205,16 +242,35 @@ func _is_paint_category(category: String) -> bool:
 func _paint_part_key(category: String) -> String:
 	return category.replace("paint_", "")
 
-func _step_paint_color(category: String, direction: int) -> void:
-	var options: Array = _part_options[category]
-	var idx: int = int(_selection_indices[category])
-	idx = posmod(idx + direction, options.size())
-	_selection_indices[category] = idx
-	var selected: Dictionary = options[idx]
+func _keycode_to_color_index(keycode: Key) -> int:
+	match keycode:
+		KEY_1: return 0
+		KEY_2: return 1
+		KEY_3: return 2
+		KEY_4: return 3
+		KEY_5: return 4
+		KEY_6: return 5
+		KEY_7: return 6
+		KEY_8: return 7
+		KEY_9: return 8
+		KEY_0: return 9
+		_: return -1
+
+func _select_paint_color_index(category: String, color_index: int) -> void:
+	var presets: Array = BikePaintLibraryScript.color_presets()
+	if presets.is_empty():
+		return
+	color_index = posmod(color_index, presets.size())
+	_selection_indices[category] = color_index
+	var selected: Dictionary = presets[color_index]
 	var part: String = _paint_part_key(category)
 	_preview_config["%s_paint_color" % part] = selected["color"]
 	_apply_preview()
 	_update_ui()
+
+func _step_paint_color(category: String, direction: int) -> void:
+	var idx: int = int(_selection_indices[category]) + direction
+	_select_paint_color_index(category, idx)
 
 func _step_paint_finish(category: String, direction: int) -> void:
 	var finishes: Array = BikePaintLibraryScript.finishes()
@@ -343,19 +399,37 @@ func _update_ui() -> void:
 	_refresh_menu_highlight()
 
 	selection_label.text = _category_names.get(category, category.capitalize())
-	if _is_paint_category(category):
+	var is_paint := _is_paint_category(category)
+	paint_picker.visible = is_paint
+	if is_paint:
 		var color_options: Array = _part_options[category]
 		var color_idx: int = int(_selection_indices[category])
 		var finish_idx: int = int(_paint_finish_indices[category])
 		var color_label: String = color_options[color_idx]["label"]
 		var finish_label: String = BikePaintLibraryScript.finishes()[finish_idx]["label"]
 		value_label.text = "%s  ·  %s" % [color_label, finish_label]
-		hint_label.text = "↑↓ part   Q/E color   ←→ texture   Enter leave   Esc discard"
+		hint_label.text = "↑↓ part   ←→ color (1-0)   Q/E finish   Enter leave   Esc discard"
+		_refresh_color_swatch_highlight(color_idx)
 	else:
 		var options: Array = _part_options[category]
 		var idx: int = int(_selection_indices[category])
 		value_label.text = options[idx]["label"]
 		hint_label.text = "↑↓ part   ←→ option   Enter leave   Esc discard"
+
+func _refresh_color_swatch_highlight(selected_index: int) -> void:
+	for i in range(_color_swatch_panels.size()):
+		var swatch: PanelContainer = _color_swatch_panels[i]
+		var preset: Dictionary = BikePaintLibraryScript.color_preset(i)
+		var style := StyleBoxFlat.new()
+		style.bg_color = preset["color"]
+		style.set_corner_radius_all(4)
+		if i == selected_index:
+			style.set_border_width_all(3)
+			style.border_color = Color(1.0, 0.58, 0.12, 1.0)
+		else:
+			style.set_border_width_all(2)
+			style.border_color = Color(0.25, 0.26, 0.28, 1.0)
+		swatch.add_theme_stylebox_override("panel", style)
 
 func _refresh_menu_highlight() -> void:
 	for i in range(_menu_rows.size()):

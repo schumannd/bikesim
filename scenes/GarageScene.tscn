@@ -82,6 +82,27 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Trail Frame"
 
+[node name="PaintPicker" type="VBoxContainer" parent="MenuPanel/Margin/VBox/DetailBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ColorPickerLabel" type="Label" parent="MenuPanel/Margin/VBox/DetailBox/PaintPicker"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "Color — click or ← →"
+
+[node name="ColorGrid" type="GridContainer" parent="MenuPanel/Margin/VBox/DetailBox/PaintPicker"]
+layout_mode = 2
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
+columns = 8
+
+[node name="FinishPickerLabel" type="Label" parent="MenuPanel/Margin/VBox/DetailBox/PaintPicker"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "Finish — Q / E"
+
 [node name="HintLabel" type="Label" parent="MenuPanel/Margin/VBox/DetailBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
