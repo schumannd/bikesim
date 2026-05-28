@@ -10,6 +10,8 @@ var _bike: Node3D
 func _ready() -> void:
 	_bike = get_node_or_null(bike_path)
 	_clear_legacy_static_layout()
+	if not _loaded_chunks.has("0:0"):
+		_create_chunk(Vector2i.ZERO, "0:0")
 	_refresh_chunks(true)
 
 func _process(_delta: float) -> void:
@@ -17,8 +19,10 @@ func _process(_delta: float) -> void:
 
 func _refresh_chunks(force: bool) -> void:
 	if _bike == null:
-		return
-	var center_chunk: Vector2i = _world_to_chunk(_bike.global_position)
+		_bike = get_node_or_null(bike_path)
+	var center_chunk: Vector2i = Vector2i.ZERO
+	if _bike != null:
+		center_chunk = _world_to_chunk(_bike.global_position)
 	var target_keys: Dictionary = {}
 	for x in range(center_chunk.x - load_radius, center_chunk.x + load_radius + 1):
 		for z in range(center_chunk.y - load_radius, center_chunk.y + load_radius + 1):
