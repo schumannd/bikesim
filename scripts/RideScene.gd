@@ -12,7 +12,7 @@ extends Control
 @onready var engine_audio: AudioStreamPlayer3D = $SubViewportContainer/SubViewport/World/Bike/EngineAudio
 @onready var world_root: Node3D = $SubViewportContainer/SubViewport/World
 
-var spawn_position: Vector3 = Vector3(0, 0.72, 0)
+var spawn_position: Vector3 = Vector3(0, 1.05, 0)
 var mission_step: int = 0
 var _garage_zone_active: bool = false
 var _pedal_phase: float = 0.0
@@ -91,7 +91,8 @@ func _update_minimap_marker() -> void:
 func _snap_rider_to_seat() -> void:
 	var seat_anchor: Node = bike_visual.get_node_or_null("SeatAnchor")
 	if seat_anchor and seat_anchor is Node3D:
-		rider_visual.position = (seat_anchor as Node3D).position + Vector3(0.0, 0.02, 0.0)
+		# Rider model origin is near pelvis; offset to seat exactly.
+		rider_visual.position = (seat_anchor as Node3D).position + Vector3(0.0, -0.73, 0.0)
 
 func _connect_existing_garage_zones() -> void:
 	for node in world_root.get_children():
