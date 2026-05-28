@@ -9,6 +9,8 @@ const BikeRigScript := preload("res://scripts/BikeRig.gd")
 @export var steer_gain_at_stop: float = 2.6
 @export var steer_gain_at_max_speed: float = 0.4
 @export var gravity: float = 18.0
+@export var slope_gravity: float = 14.0
+@export var uphill_drag: float = 10.0
 @export var step_probe_distance: float = 0.55
 
 var speed: float = 0.0
@@ -39,11 +41,27 @@ func _physics_process(delta: float) -> void:
 	rotate_y(-steer * steering_speed * steer_gain * delta)
 
 	var forward := -global_transform.basis.z
-	velocity.x = forward.x * speed
-	velocity.z = forward.z * speed
+	var floor_normal := get_floor_normal() if is_on_floor() else Vector3.UP
+	var forward_on_slope := forward.slide(floor_normal)
+	if forward_on_slope.length_squared() > 0.0001:
+		forward_on_slope = forward_on_slope.normalized()
+	else:
+		forward_on_slope = forward
+
+	if is_on_floor():
+		var downhill := Vector3(floor_normal.x, 0.0, floor_normal.z)
+		if downhill.length_squared() > 0.0001:
+			downhill = downhill.normalized()
+			var slope_amount := clampf(1.0 - floor_normal.y, 0.0, 0.85)
+			var facing_down := forward_on_slope.dot(downhill)
+			speed += facing_down * slope_gravity * slope_amount * delta
+			if facing_down < -0.05 and throttle > 0.01:
+				speed += facing_down * uphill_drag * delta
+
+	velocity = forward_on_slope * speed
 	if not is_on_floor():
 		velocity.y -= gravity * delta
-	_try_step_up(forward)
+	_try_step_up(forward_on_slope)
 	move_and_slide()
 	_handle_impact_sounds(braking)
 

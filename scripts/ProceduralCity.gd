@@ -7,31 +7,32 @@ signal house_entrance_created(zone: Area3D)
 @export var chunk_size: float = 120.0
 @export var load_radius: int = 5
 
-# Reserved footprint on chunk (0,0) — no random buildings inside this box.
 const GARAGE_LOT_MIN := Vector3(-40.0, 0.0, -40.0)
 const GARAGE_LOT_MAX := Vector3(-6.0, 0.0, -4.0)
 const GARAGE_POSITION := Vector3(-18.0, 0.0, -16.0)
+const ROAD_THICKNESS := 0.12
+const TERRAIN_GRID := 20
 
-# Layered heights prevent coplanar ground/road z-fighting (ride surface stays at y=0).
-const TERRAIN_TOP_Y := -0.25
-const TERRAIN_THICKNESS := 0.5
-const ROAD_TOP_Y := 0.0
-const ROAD_THICKNESS := 0.15
-const ROAD_WIDTH := 16.0
 const WorldPropBuilderScript := preload("res://scripts/WorldPropBuilder.gd")
 const WorldNPCScript := preload("res://scripts/WorldNPC.gd")
 const BikeRigScript := preload("res://scripts/BikeRig.gd")
+const CityTerrainScript := preload("res://scripts/CityTerrain.gd")
+const WorldLandmarksScript := preload("res://scripts/WorldLandmarks.gd")
 
 var _loaded_chunks: Dictionary = {}
 var _bike: Node3D
-var _terrain_visual: MeshInstance3D
 var _road_material: StandardMaterial3D
-var _terrain_material: StandardMaterial3D
+var _highway_material: StandardMaterial3D
 
 func _ready() -> void:
 	_bike = get_node_or_null(bike_path)
 	_clear_legacy_static_layout()
-	_setup_global_terrain_visual()
+	_road_material = StandardMaterial3D.new()
+	_road_material.albedo_color = Color(0.1, 0.1, 0.12, 1.0)
+	_road_material.roughness = 0.95
+	_highway_material = StandardMaterial3D.new()
+	_highway_material.albedo_color = Color(0.08, 0.08, 0.09, 1.0)
+	_highway_material.roughness = 0.92
 	if not _loaded_chunks.has("0:0"):
 		_create_chunk(Vector2i.ZERO, "0:0", Vector2i.ZERO)
 	_refresh_chunks(true)
@@ -44,7 +45,6 @@ func _refresh_chunks(force: bool) -> void:
 		_bike = get_node_or_null(bike_path)
 	if _bike == null:
 		return
-	_sync_global_terrain_position()
 	var center_chunk: Vector2i = _world_to_chunk(_bike.global_position)
 	var target_keys: Dictionary = {}
 	for x in range(center_chunk.x - load_radius, center_chunk.x + load_radius + 1):
@@ -73,114 +73,154 @@ func _create_chunk(chunk_coord: Vector2i, key: String, center_chunk: Vector2i) -
 	var rng := RandomNumberGenerator.new()
 	rng.seed = _chunk_seed(chunk_coord)
 
-	_add_ground(chunk_node)
-	_add_roads(chunk_node)
+	var center_wx := (float(chunk_coord.x) + 0.5) * chunk_size
+	var center_wz := (float(chunk_coord.y) + 0.5) * chunk_size
+	var zone: CityTerrainScript.Zone = CityTerrainScript.get_zone(center_wx, center_wz)
+
+	_add_height_terrain(chunk_node, chunk_coord, zone)
+	_add_roads(chunk_node, chunk_coord, zone)
+	WorldLandmarksScript.add_train_tracks(chunk_node, chunk_coord, chunk_size)
+
+	match zone:
+		CityTerrainScript.Zone.SCHOOL:
+			WorldLandmarksScript.add_school(chunk_node, Vector3(chunk_size * 0.5, 0.0, chunk_size * 0.5))
+		CityTerrainScript.Zone.STADIUM:
+			WorldLandmarksScript.add_stadium(chunk_node, Vector3(chunk_size * 0.5, 0.0, chunk_size * 0.5))
+		CityTerrainScript.Zone.TRAIN_STATION:
+			WorldLandmarksScript.add_train_station(chunk_node, Vector3(chunk_size * 0.5, 0.0, chunk_size * 0.5))
+		CityTerrainScript.Zone.PARK:
+			_add_park_trees(chunk_node, chunk_coord, rng)
+
 	if chunk_coord == Vector2i.ZERO:
-		_add_garage(chunk_node)
+		_add_garage(chunk_node, chunk_coord)
 	if chunk_coord == GameState.wizard_tower_chunk():
 		_add_wizard_tower(chunk_node, chunk_coord)
-	_add_city_blocks(chunk_node, chunk_coord, rng)
-	WorldPropBuilderScript.populate_chunk(chunk_node, rng, chunk_coord)
+	if CityTerrainScript.zone_allows_buildings(zone):
+		_add_city_blocks(chunk_node, chunk_coord, rng)
+	WorldPropBuilderScript.populate_chunk(chunk_node, rng, chunk_coord, zone)
 	_add_chunk_npcs(chunk_node, chunk_coord, center_chunk, rng)
 
-func _setup_global_terrain_visual() -> void:
-	if _terrain_visual != null:
-		return
-	_terrain_material = StandardMaterial3D.new()
-	_terrain_material.albedo_color = Color(0.18, 0.19, 0.2, 1.0)
-	_terrain_material.roughness = 1.0
-	_road_material = StandardMaterial3D.new()
-	_road_material.albedo_color = Color(0.1, 0.1, 0.12, 1.0)
-	_road_material.roughness = 0.95
+func _add_height_terrain(parent: Node3D, chunk_coord: Vector2i, zone: CityTerrainScript.Zone) -> void:
+	var cell := chunk_size / float(TERRAIN_GRID)
+	var ox := float(chunk_coord.x) * chunk_size
+	var oz := float(chunk_coord.y) * chunk_size
+	var vert_count := (TERRAIN_GRID + 1) * (TERRAIN_GRID + 1)
+	var heights := PackedFloat32Array()
+	heights.resize(vert_count)
 
-	_terrain_visual = MeshInstance3D.new()
-	_terrain_visual.name = "GlobalTerrain"
-	var terrain_mesh := BoxMesh.new()
-	var span := chunk_size * float(load_radius * 2 + 3)
-	terrain_mesh.size = Vector3(span, TERRAIN_THICKNESS, span)
-	_terrain_visual.mesh = terrain_mesh
-	_terrain_visual.position = Vector3(
-		0.0,
-		TERRAIN_TOP_Y - TERRAIN_THICKNESS * 0.5,
-		0.0
-	)
-	_terrain_visual.material_override = _terrain_material
-	add_child(_terrain_visual)
+	var verts := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var indices := PackedInt32Array()
+	verts.resize(vert_count)
+	normals.resize(vert_count)
+	uvs.resize(vert_count)
 
-func _sync_global_terrain_position() -> void:
-	if _terrain_visual == null or _bike == null:
-		return
-	var center_chunk := _world_to_chunk(_bike.global_position)
-	_terrain_visual.position = Vector3(
-		center_chunk.x * chunk_size,
-		TERRAIN_TOP_Y - TERRAIN_THICKNESS * 0.5,
-		center_chunk.y * chunk_size
-	)
+	var vi := 0
+	for gz in TERRAIN_GRID + 1:
+		for gx in TERRAIN_GRID + 1:
+			var wx := ox + float(gx) * cell
+			var wz := oz + float(gz) * cell
+			var h := CityTerrainScript.sample_height(wx, wz)
+			heights[vi] = h
+			verts[vi] = Vector3(float(gx) * cell, h, float(gz) * cell)
+			normals[vi] = CityTerrainScript.sample_normal(wx, wz)
+			uvs[vi] = Vector2(float(gx) / TERRAIN_GRID, float(gz) / TERRAIN_GRID)
+			vi += 1
 
-func _add_ground(parent: Node3D) -> void:
-	# Flat ride collision at road height — terrain mesh stays lower for visuals only.
-	var ground_body := StaticBody3D.new()
-	ground_body.name = "RideSurface"
-	var ride_y: float = BikeRigScript.RIDE_SURFACE_Y
-	ground_body.position = Vector3(0.0, ride_y - 0.5, 0.0)
-	parent.add_child(ground_body)
-	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(chunk_size, 1.0, chunk_size)
-	shape.shape = box
-	ground_body.add_child(shape)
+	for gz in TERRAIN_GRID:
+		for gx in TERRAIN_GRID:
+			var i := gz * (TERRAIN_GRID + 1) + gx
+			indices.append_array([i, i + TERRAIN_GRID + 1, i + 1, i + 1, i + TERRAIN_GRID + 1, i + TERRAIN_GRID + 2])
 
-func _add_roads(parent: Node3D) -> void:
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var array_mesh := ArrayMesh.new()
+	array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+
+	var ground_mat := StandardMaterial3D.new()
+	ground_mat.albedo_color = CityTerrainScript.zone_ground_color(zone)
+	ground_mat.roughness = 1.0
+
+	var mesh_inst := MeshInstance3D.new()
+	mesh_inst.name = "TerrainMesh"
+	mesh_inst.mesh = array_mesh
+	mesh_inst.material_override = ground_mat
+	parent.add_child(mesh_inst)
+
+	var body := StaticBody3D.new()
+	body.name = "RideSurface"
+	parent.add_child(body)
+	var shape_node := CollisionShape3D.new()
+	var hmap := HeightMapShape3D.new()
+	hmap.map_width = TERRAIN_GRID + 1
+	hmap.map_depth = TERRAIN_GRID + 1
+	hmap.map_data = heights
+	shape_node.shape = hmap
+	shape_node.position = Vector3(chunk_size * 0.5, 0.0, chunk_size * 0.5)
+	shape_node.scale = Vector3(chunk_size, 1.0, chunk_size)
+	body.add_child(shape_node)
+
+func _add_roads(parent: Node3D, chunk_coord: Vector2i, zone: CityTerrainScript.Zone) -> void:
 	var road_body := StaticBody3D.new()
 	road_body.name = "RoadNetwork"
-	road_body.position = Vector3(0.0, ROAD_TOP_Y - ROAD_THICKNESS * 0.5, 0.0)
 	parent.add_child(road_body)
 
+	var road_w := CityTerrainScript.road_width_for_zone(zone)
 	var half_chunk := chunk_size * 0.5
-	var half_road := ROAD_WIDTH * 0.5
-	var arm_length := half_chunk - half_road
+	var half_road := road_w * 0.5
+	var arm_length := maxf(half_chunk - half_road, 8.0)
+	var mat := _highway_material if zone == CityTerrainScript.Zone.HIGHWAY else _road_material
 
-	_add_road_segment(road_body, Vector3.ZERO, Vector3(ROAD_WIDTH, ROAD_THICKNESS, ROAD_WIDTH))
-	_add_road_segment(
-		road_body,
-		Vector3(0.0, 0.0, half_road + arm_length * 0.5),
-		Vector3(ROAD_WIDTH, ROAD_THICKNESS, arm_length)
-	)
-	_add_road_segment(
-		road_body,
-		Vector3(0.0, 0.0, -(half_road + arm_length * 0.5)),
-		Vector3(ROAD_WIDTH, ROAD_THICKNESS, arm_length)
-	)
-	_add_road_segment(
-		road_body,
-		Vector3(half_road + arm_length * 0.5, 0.0, 0.0),
-		Vector3(arm_length, ROAD_THICKNESS, ROAD_WIDTH)
-	)
-	_add_road_segment(
-		road_body,
-		Vector3(-(half_road + arm_length * 0.5), 0.0, 0.0),
-		Vector3(arm_length, ROAD_THICKNESS, ROAD_WIDTH)
-	)
+	if zone == CityTerrainScript.Zone.PARK:
+		_add_road_segment(road_body, chunk_coord, Vector3(half_chunk, 0.0, half_chunk * 0.5), Vector3(4.0, ROAD_THICKNESS, half_chunk), mat)
+		_add_road_segment(road_body, chunk_coord, Vector3(half_chunk * 0.5, 0.0, half_chunk), Vector3(half_chunk, ROAD_THICKNESS, 4.0), mat)
+		return
 
-func _add_road_segment(road_body: StaticBody3D, pos: Vector3, size: Vector3) -> void:
+	_add_road_segment(road_body, chunk_coord, Vector3(half_chunk, 0.0, half_chunk), Vector3(road_w, ROAD_THICKNESS, road_w), mat)
+	_add_road_segment(road_body, chunk_coord, Vector3(half_chunk, 0.0, half_road + arm_length * 0.5), Vector3(road_w, ROAD_THICKNESS, arm_length), mat)
+	_add_road_segment(road_body, chunk_coord, Vector3(half_chunk, 0.0, half_chunk - (half_road + arm_length * 0.5)), Vector3(road_w, ROAD_THICKNESS, arm_length), mat)
+	_add_road_segment(road_body, chunk_coord, Vector3(half_road + arm_length * 0.5, 0.0, half_chunk), Vector3(arm_length, ROAD_THICKNESS, road_w), mat)
+	_add_road_segment(road_body, chunk_coord, Vector3(half_chunk - (half_road + arm_length * 0.5), 0.0, half_chunk), Vector3(arm_length, ROAD_THICKNESS, road_w), mat)
+
+	if zone == CityTerrainScript.Zone.SUBURB or zone == CityTerrainScript.Zone.SMALL_STREET:
+		var lane := 22.0
+		_add_road_segment(road_body, chunk_coord, Vector3(lane, 0.0, half_chunk), Vector3(6.0, ROAD_THICKNESS, arm_length * 0.85), mat)
+		_add_road_segment(road_body, chunk_coord, Vector3(chunk_size - lane, 0.0, half_chunk), Vector3(6.0, ROAD_THICKNESS, arm_length * 0.85), mat)
+
+func _add_road_segment(road_body: StaticBody3D, chunk_coord: Vector2i, local_pos: Vector3, size: Vector3, mat: Material) -> void:
+	var wx := chunk_coord.x * chunk_size + local_pos.x
+	var wz := chunk_coord.y * chunk_size + local_pos.z
+	var hy := CityTerrainScript.sample_height(wx, wz)
 	var mesh_inst := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
 	mesh.size = size
 	mesh_inst.mesh = mesh
-	mesh_inst.position = pos
-	mesh_inst.material_override = _road_material
+	mesh_inst.position = Vector3(local_pos.x, hy + ROAD_THICKNESS * 0.5, local_pos.z)
+	mesh_inst.material_override = mat
 	road_body.add_child(mesh_inst)
+
+func _add_park_trees(parent: Node3D, chunk_coord: Vector2i, rng: RandomNumberGenerator) -> void:
+	for i in 18:
+		var lx := rng.randf_range(8.0, chunk_size - 8.0)
+		var lz := rng.randf_range(8.0, chunk_size - 8.0)
+		var wx := chunk_coord.x * chunk_size + lx
+		var wz := chunk_coord.y * chunk_size + lz
+		var hy := CityTerrainScript.sample_height(wx, wz)
+		WorldPropBuilderScript.add_tree_at(parent, Vector3(lx, hy, lz), rng)
 
 func _add_chunk_npcs(parent: Node3D, chunk_coord: Vector2i, center_chunk: Vector2i, rng: RandomNumberGenerator) -> void:
 	var dist: int = maxi(absi(chunk_coord.x - center_chunk.x), absi(chunk_coord.y - center_chunk.y))
 	if dist > 3:
 		return
-
 	var npc_count := 1 if dist > 2 else rng.randi_range(2, 4)
 	var npc_root := Node3D.new()
 	npc_root.name = "NPCs"
 	parent.add_child(npc_root)
-
 	for i in npc_count:
 		var spawn := _pick_npc_spawn(rng, chunk_coord)
 		if spawn == Vector3.INF:
@@ -193,42 +233,23 @@ func _add_chunk_npcs(parent: Node3D, chunk_coord: Vector2i, center_chunk: Vector
 
 func _pick_npc_spawn(rng: RandomNumberGenerator, chunk_coord: Vector2i) -> Vector3:
 	for _attempt in 12:
-		var on_road := behavior_roll_road(rng)
-		var pos: Vector3
-		if on_road:
-			var along_x := rng.randf() > 0.5
-			if along_x:
-				pos = Vector3(rng.randf_range(-48.0, 48.0), ROAD_TOP_Y, rng.randf_range(-4.0, 4.0))
-			else:
-				pos = Vector3(rng.randf_range(-4.0, 4.0), ROAD_TOP_Y, rng.randf_range(-48.0, 48.0))
-		else:
-			var side_x := rng.randf() > 0.5
-			if side_x:
-				var side := -1.0 if rng.randf() > 0.5 else 1.0
-				pos = Vector3(side * rng.randf_range(18.0, 42.0), ROAD_TOP_Y, rng.randf_range(-48.0, 48.0))
-			else:
-				var side := -1.0 if rng.randf() > 0.5 else 1.0
-				pos = Vector3(rng.randf_range(-48.0, 48.0), ROAD_TOP_Y, side * rng.randf_range(18.0, 42.0))
-		if chunk_coord == Vector2i.ZERO and pos.distance_to(Vector3(-18.0, 0.0, -16.0)) < 20.0:
+		var lx := rng.randf_range(12.0, chunk_size - 12.0)
+		var lz := rng.randf_range(12.0, chunk_size - 12.0)
+		if chunk_coord == Vector2i.ZERO and Vector3(lx, 0.0, lz).distance_to(GARAGE_POSITION) < 20.0:
 			continue
-		return pos
+		var wx := chunk_coord.x * chunk_size + lx
+		var wz := chunk_coord.y * chunk_size + lz
+		var hy := CityTerrainScript.sample_height(wx, wz)
+		return Vector3(wx, hy, wz)
 	return Vector3.INF
-
-func behavior_roll_road(rng: RandomNumberGenerator) -> bool:
-	return rng.randf() < 0.38
 
 func _add_city_blocks(parent: Node3D, chunk_coord: Vector2i, rng: RandomNumberGenerator) -> void:
 	var slots := [
-		Vector3(-36.0, 0.0, -36.0),
-		Vector3(36.0, 0.0, -36.0),
-		Vector3(-36.0, 0.0, 36.0),
-		Vector3(36.0, 0.0, 36.0),
-		Vector3(-50.0, 0.0, 0.0),
-		Vector3(50.0, 0.0, 0.0),
-		Vector3(0.0, 0.0, -50.0),
-		Vector3(0.0, 0.0, 50.0)
+		Vector3(-36.0, 0.0, -36.0), Vector3(36.0, 0.0, -36.0),
+		Vector3(-36.0, 0.0, 36.0), Vector3(36.0, 0.0, 36.0),
+		Vector3(-50.0, 0.0, 0.0), Vector3(50.0, 0.0, 0.0),
+		Vector3(0.0, 0.0, -50.0), Vector3(0.0, 0.0, 50.0)
 	]
-
 	var enterable_added := false
 	for slot: Vector3 in slots:
 		if rng.randf() < 0.25:
@@ -243,10 +264,14 @@ func _add_city_blocks(parent: Node3D, chunk_coord: Vector2i, rng: RandomNumberGe
 		mesh.size = Vector3(width, height, depth)
 		shape.size = mesh.size
 		collision.shape = shape
-		building.position = slot + Vector3(rng.randf_range(-4.0, 4.0), 0.0, rng.randf_range(-4.0, 4.0))
-		if chunk_coord == Vector2i.ZERO and _overlaps_garage_lot(building.position, mesh.size):
+		var pos := slot + Vector3(rng.randf_range(-4.0, 4.0), 0.0, rng.randf_range(-4.0, 4.0))
+		if chunk_coord == Vector2i.ZERO and _overlaps_garage_lot(pos, mesh.size):
 			building.queue_free()
 			continue
+		var wx := chunk_coord.x * chunk_size + pos.x
+		var wz := chunk_coord.y * chunk_size + pos.z
+		var ground_y := CityTerrainScript.sample_height(wx, wz)
+		building.position = Vector3(pos.x, ground_y, pos.z)
 		building.add_child(collision)
 		var building_mesh := MeshInstance3D.new()
 		building_mesh.mesh = mesh
@@ -307,59 +332,48 @@ func _overlaps_garage_lot(building_pos: Vector3, building_size: Vector3) -> bool
 
 func _chunk_seed(chunk_coord: Vector2i) -> int:
 	var base_seed: int = int(GameState.world_seed)
-	var x_part: int = chunk_coord.x * 92821
-	var z_part: int = chunk_coord.y * 68917
-	return abs(base_seed + x_part + z_part)
+	return abs(base_seed + chunk_coord.x * 92821 + chunk_coord.y * 68917)
 
 func _clear_legacy_static_layout() -> void:
-	var legacy_nodes := ["Ground", "Road", "RoadCross", "OffroadPatch", "Sidewalk", "CityBlocks"]
+	var legacy_nodes := ["Ground", "Road", "RoadCross", "OffroadPatch", "Sidewalk", "CityBlocks", "GlobalTerrain"]
 	for node_name: String in legacy_nodes:
 		var node := get_node_or_null(node_name)
 		if node:
 			node.queue_free()
 
-func _add_garage(parent: Node3D) -> void:
+func _add_garage(parent: Node3D, chunk_coord: Vector2i) -> void:
 	var garage := Node3D.new()
 	garage.name = "GarageBuilding"
 	garage.position = GARAGE_POSITION
 	parent.add_child(garage)
-
 	var wall_mat := _garage_material(Color(1.0, 0.55, 0.08, 1.0), 0.35)
 	var trim_mat := _garage_material(Color(1.0, 0.95, 0.2, 1.0), 1.0)
 	var interior_mat := _garage_material(Color(0.15, 0.35, 0.9, 1.0), 0.8)
 	var pad_mat := _garage_material(Color(1.0, 0.95, 0.2, 1.0), 1.2)
-
 	var width := 14.0
 	var depth := 10.0
 	var height := 7.0
 	var wall_t := 1.1
 	var door_w := 5.2
 	var door_h := 4.2
-
 	_add_garage_box(garage, "ApproachPad", Vector3(0.0, 0.03, 7.2), Vector3(door_w + 2.4, 0.06, 5.0), pad_mat, false)
 	var floor_thickness := 0.12
-	_add_garage_box(
-		garage,
-		"Floor",
-		Vector3(0.0, BikeRigScript.RIDE_SURFACE_Y - floor_thickness * 0.5, 0.0),
-		Vector3(width, floor_thickness, depth),
-		pad_mat,
-		true
+	var garage_ground_y := CityTerrainScript.sample_height(
+		chunk_coord.x * chunk_size + GARAGE_POSITION.x,
+		chunk_coord.y * chunk_size + GARAGE_POSITION.z
 	)
+	_add_garage_box(garage, "Floor", Vector3(0.0, garage_ground_y - floor_thickness * 0.5, 0.0), Vector3(width, floor_thickness, depth), pad_mat, true)
 	_add_garage_box(garage, "BackWall", Vector3(0.0, height * 0.5, -depth * 0.5 + wall_t * 0.5), Vector3(width, height, wall_t), wall_mat, true)
 	_add_garage_box(garage, "LeftWall", Vector3(-width * 0.5 + wall_t * 0.5, height * 0.5, 0.0), Vector3(wall_t, height, depth), wall_mat, true)
 	_add_garage_box(garage, "RightWall", Vector3(width * 0.5 - wall_t * 0.5, height * 0.5, 0.0), Vector3(wall_t, height, depth), wall_mat, true)
-
 	var side_span := (width - door_w) * 0.5
 	_add_garage_box(garage, "FrontLeftPillar", Vector3(-door_w * 0.5 - side_span * 0.5, height * 0.5, depth * 0.5 - wall_t * 0.5), Vector3(side_span, height, wall_t), wall_mat, true)
 	_add_garage_box(garage, "FrontRightPillar", Vector3(door_w * 0.5 + side_span * 0.5, height * 0.5, depth * 0.5 - wall_t * 0.5), Vector3(side_span, height, wall_t), wall_mat, true)
 	_add_garage_box(garage, "DoorLintel", Vector3(0.0, height - (height - door_h) * 0.5, depth * 0.5 - wall_t * 0.5), Vector3(door_w, height - door_h, wall_t), wall_mat, true)
-
 	_add_garage_box(garage, "DoorInterior", Vector3(0.0, door_h * 0.5, depth * 0.5 - 1.2), Vector3(door_w - 0.4, door_h - 0.2, 1.6), interior_mat, false)
 	_add_garage_box(garage, "DoorFrameL", Vector3(-door_w * 0.5 - 0.12, door_h * 0.5, depth * 0.5 + 0.1), Vector3(0.2, door_h, 0.25), trim_mat, false)
 	_add_garage_box(garage, "DoorFrameR", Vector3(door_w * 0.5 + 0.12, door_h * 0.5, depth * 0.5 + 0.1), Vector3(0.2, door_h, 0.25), trim_mat, false)
 	_add_garage_box(garage, "DoorRamp", Vector3(0.0, 0.12, depth * 0.5 + 2.0), Vector3(door_w, 0.24, 2.8), trim_mat, false)
-
 	var sign := MeshInstance3D.new()
 	sign.name = "GarageSign"
 	var sign_mesh := BoxMesh.new()
@@ -368,7 +382,6 @@ func _add_garage(parent: Node3D) -> void:
 	sign.position = Vector3(0.0, height + 0.5, depth * 0.5 + 0.2)
 	sign.material_override = trim_mat
 	garage.add_child(sign)
-
 	var beacon := OmniLight3D.new()
 	beacon.name = "GarageBeacon"
 	beacon.position = Vector3(0.0, 4.5, depth * 0.5 + 2.5)
@@ -376,7 +389,6 @@ func _add_garage(parent: Node3D) -> void:
 	beacon.light_energy = 2.8
 	beacon.omni_range = 18.0
 	garage.add_child(beacon)
-
 	var zone := Area3D.new()
 	zone.name = "GarageEntranceZone"
 	zone.monitoring = true
@@ -395,14 +407,11 @@ func _add_wizard_tower(parent: Node3D, chunk_coord: Vector2i) -> void:
 	tower.name = "WizardTower"
 	tower.position = GameState.wizard_tower_local_position()
 	parent.add_child(tower)
-
 	GameState.wizard_tower_world_position = GameState.wizard_tower_world_position_for_chunk(chunk_coord)
-
 	var stone := _wizard_material(Color(0.42, 0.18, 0.72, 1.0), 0.9, 1.4)
 	var stone_dark := _wizard_material(Color(0.28, 0.1, 0.5, 1.0), 0.95, 0.8)
 	var glow := _wizard_material(Color(0.75, 0.45, 1.0, 1.0), 0.2, 2.2)
 	var roof := _wizard_material(Color(0.22, 0.08, 0.38, 1.0), 0.85, 0.5)
-
 	_add_garage_box(tower, "Foundation", Vector3(0.0, 0.2, 0.0), Vector3(9.0, 0.4, 9.0), stone_dark, true)
 	_add_garage_box(tower, "TowerBase", Vector3(0.0, 2.5, 0.0), Vector3(6.0, 5.0, 6.0), stone, true)
 	_add_garage_box(tower, "TowerMid", Vector3(0.0, 6.8, 0.0), Vector3(4.8, 4.2, 4.8), stone, true)
@@ -410,26 +419,6 @@ func _add_wizard_tower(parent: Node3D, chunk_coord: Vector2i) -> void:
 	_add_garage_box(tower, "Roof", Vector3(0.0, 12.8, 0.0), Vector3(4.4, 1.6, 4.4), roof, false)
 	_add_garage_box(tower, "Spire", Vector3(0.0, 14.6, 0.0), Vector3(0.5, 2.4, 0.5), glow, false)
 	_add_garage_box(tower, "DoorGlow", Vector3(0.0, 1.4, 3.15), Vector3(2.2, 2.6, 0.2), glow, false)
-	_add_garage_box(tower, "WindowA", Vector3(-1.2, 5.0, 2.45), Vector3(0.9, 1.2, 0.12), glow, false)
-	_add_garage_box(tower, "WindowB", Vector3(1.2, 7.5, 2.35), Vector3(0.9, 1.2, 0.12), glow, false)
-
-	var sign := MeshInstance3D.new()
-	sign.name = "TowerSign"
-	var sign_mesh := BoxMesh.new()
-	sign_mesh.size = Vector3(4.5, 0.9, 0.2)
-	sign.mesh = sign_mesh
-	sign.position = Vector3(0.0, 13.6, 2.2)
-	sign.material_override = glow
-	tower.add_child(sign)
-
-	var beacon := OmniLight3D.new()
-	beacon.name = "TowerBeacon"
-	beacon.position = Vector3(0.0, 12.0, 2.0)
-	beacon.light_color = Color(0.7, 0.35, 1.0, 1.0)
-	beacon.light_energy = 3.2
-	beacon.omni_range = 22.0
-	tower.add_child(beacon)
-
 	var zone := Area3D.new()
 	zone.name = "WizardTowerEntrance"
 	zone.monitoring = true

@@ -1,6 +1,8 @@
 extends Object
 class_name BikeRig
 
+const CityTerrainScript := preload("res://scripts/CityTerrain.gd")
+
 ## Single source of truth for bike/rider placement and simple fall recovery.
 
 const RIDER_PELVIS_LOCAL := Vector3(0.0, 0.73, 0.04)
@@ -33,7 +35,8 @@ static func house_exit_spawn(entrance_world: Vector3) -> Vector3:
 	return ride_spawn_position(entrance_world)
 
 static func ride_spawn_position(xz: Vector3 = Vector3.ZERO) -> Vector3:
-	return Vector3(xz.x, RIDE_SURFACE_Y, xz.z)
+	var y := CityTerrainScript.sample_height(xz.x, xz.z)
+	return Vector3(xz.x, y, xz.z)
 
 static func max_step_height(wheel_radius: float) -> float:
 	return wheel_radius * MAX_STEP_HEIGHT_RATIO

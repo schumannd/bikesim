@@ -44,8 +44,14 @@ func _ready() -> void:
 		world_root.house_entrance_created.connect(_on_house_entrance_created)
 	_connect_existing_zones()
 
+func _bike_speed() -> float:
+	if bike == null:
+		return 0.0
+	var value: Variant = (bike as Node).get("speed")
+	return float(value) if value != null else 0.0
+
 func _process(_delta: float) -> void:
-	var kmh := int((bike as Node).get("speed") * 3.6)
+	var kmh := int(_bike_speed() * 3.6)
 	speed_label.text = "Speed: %d km/h" % max(kmh, 0)
 	if minimap.has_method("update_for_player"):
 		minimap.call("update_for_player", bike.global_position)
@@ -62,11 +68,12 @@ func _process(_delta: float) -> void:
 	_update_quest_labels()
 
 func _physics_process(_delta: float) -> void:
-	var normalized_speed: float = clamp(abs((bike as Node).get("speed")) / 30.0, 0.0, 1.0)
+	var current_speed := _bike_speed()
+	var normalized_speed: float = clamp(absf(current_speed) / 30.0, 0.0, 1.0)
 	engine_audio.pitch_scale = 0.75 + normalized_speed * 0.9
 	engine_audio.volume_db = lerp(-18.0, -4.0, normalized_speed)
-	_pedal_phase += abs((bike as Node).get("speed")) * _delta * 0.9
-	bike_visual.call("animate_drive", (bike as Node).get("speed"), _delta)
+	_pedal_phase += absf(current_speed) * _delta * 0.9
+	bike_visual.call("animate_drive", current_speed, _delta)
 	rider_visual.call("animate_pedaling", _pedal_phase, normalized_speed)
 
 func _apply_visuals() -> void:

@@ -1,18 +1,19 @@
 extends Object
 class_name WorldPropBuilder
 
-const ROAD_TOP_Y := 0.0
+const CityTerrainScript := preload("res://scripts/CityTerrain.gd")
 
-static func populate_chunk(parent: Node3D, rng: RandomNumberGenerator, chunk_coord: Vector2i) -> void:
+static func populate_chunk(parent: Node3D, rng: RandomNumberGenerator, chunk_coord: Vector2i, zone: int = 0) -> void:
 	var props_root := Node3D.new()
 	props_root.name = "Props"
 	parent.add_child(props_root)
 
-	_add_sidewalk_strips(props_root, rng)
-	_add_road_markings(props_root)
-	var prop_count := rng.randi_range(5, 10)
+	if zone != CityTerrainScript.Zone.PARK:
+		_add_sidewalk_strips(props_root, chunk_coord, rng)
+		_add_road_markings(props_root, chunk_coord)
+	var prop_count := rng.randi_range(4, 9) if zone != CityTerrainScript.Zone.PARK else 0
 	for i in prop_count:
-		var pos := _random_prop_position(rng, chunk_coord)
+		var pos := _random_prop_position(rng, chunk_coord, zone)
 		if pos == Vector3.INF:
 			continue
 		match rng.randi_range(0, 6):
@@ -31,42 +32,44 @@ static func populate_chunk(parent: Node3D, rng: RandomNumberGenerator, chunk_coo
 			6:
 				_add_street_sign(props_root, pos, rng)
 
-static func _random_prop_position(rng: RandomNumberGenerator, chunk_coord: Vector2i) -> Vector3:
+static func _random_prop_position(rng: RandomNumberGenerator, chunk_coord: Vector2i, zone: int) -> Vector3:
+	const CHUNK := 120.0
 	for _attempt in 8:
-		var on_x_band := rng.randf() > 0.5
-		var pos: Vector3
-		if on_x_band:
-			var side := -1.0 if rng.randf() > 0.5 else 1.0
-			pos = Vector3(side * rng.randf_range(22.0, 52.0), ROAD_TOP_Y, rng.randf_range(-52.0, 52.0))
-		else:
-			var side := -1.0 if rng.randf() > 0.5 else 1.0
-			pos = Vector3(rng.randf_range(-52.0, 52.0), ROAD_TOP_Y, side * rng.randf_range(22.0, 52.0))
-		if chunk_coord == Vector2i.ZERO and pos.distance_to(Vector3(-18.0, 0.0, -16.0)) < 22.0:
+		var lx := rng.randf_range(10.0, CHUNK - 10.0)
+		var lz := rng.randf_range(10.0, CHUNK - 10.0)
+		var wx := chunk_coord.x * CHUNK + lx
+		var wz := chunk_coord.y * CHUNK + lz
+		if chunk_coord == Vector2i.ZERO and Vector3(lx, 0.0, lz).distance_to(Vector3(-18.0, 0.0, -16.0)) < 22.0:
 			continue
-		if absf(pos.x) < 12.0 and absf(pos.z) < 12.0:
+		if zone != CityTerrainScript.Zone.PARK and absf(lx - 60.0) < 14.0 and absf(lz - 60.0) < 14.0:
 			continue
-		return pos
+		return Vector3(lx, CityTerrainScript.sample_height(wx, wz), lz)
 	return Vector3.INF
 
-static func _add_sidewalk_strips(parent: Node3D, rng: RandomNumberGenerator) -> void:
+static func add_tree_at(parent: Node3D, local_pos: Vector3, rng: RandomNumberGenerator) -> void:
+	_add_tree(parent, local_pos, rng)
+
+static func _add_sidewalk_strips(parent: Node3D, chunk_coord: Vector2i, rng: RandomNumberGenerator) -> void:
 	var mat := _mat(Color(0.42, 0.43, 0.44, 1.0), 0.98)
 	var strip_w := 3.5
 	var strip_h := 0.08
 	var half := 60.0
-	var road_half := 8.0
+	var road_half := 10.0
 	var offset := road_half + strip_w * 0.5 + 0.5
-	_add_box(parent, Vector3(offset, ROAD_TOP_Y + strip_h * 0.5, 0.0), Vector3(strip_w, strip_h, half * 2.0 - 16.0), mat)
-	_add_box(parent, Vector3(-offset, ROAD_TOP_Y + strip_h * 0.5, 0.0), Vector3(strip_w, strip_h, half * 2.0 - 16.0), mat)
-	_add_box(parent, Vector3(0.0, ROAD_TOP_Y + strip_h * 0.5, offset), Vector3(half * 2.0 - 16.0, strip_h, strip_w), mat)
-	_add_box(parent, Vector3(0.0, ROAD_TOP_Y + strip_h * 0.5, -offset), Vector3(half * 2.0 - 16.0, strip_h, strip_w), mat)
-	if rng.randf() > 0.4:
-		var accent := _mat(Color(0.5, 0.52, 0.54, 1.0), 1.0)
-		_add_box(parent, Vector3(offset, ROAD_TOP_Y + strip_h + 0.01, 0.0), Vector3(strip_w - 0.6, 0.02, 1.2), accent)
+	var cx := float(chunk_coord.x) * 120.0 + 60.0
+	var cz := float(chunk_coord.y) * 120.0 + 60.0
+	var y0 := CityTerrainScript.sample_height(cx + offset, cz) + strip_h * 0.5
+	_add_box(parent, Vector3(offset, y0, 60.0), Vector3(strip_w, strip_h, half * 2.0 - 16.0), mat)
+	_add_box(parent, Vector3(-offset, y0, 60.0), Vector3(strip_w, strip_h, half * 2.0 - 16.0), mat)
+	_add_box(parent, Vector3(60.0, CityTerrainScript.sample_height(cx, cz + offset) + strip_h * 0.5, offset), Vector3(half * 2.0 - 16.0, strip_h, strip_w), mat)
+	_add_box(parent, Vector3(60.0, CityTerrainScript.sample_height(cx, cz - offset) + strip_h * 0.5, -offset), Vector3(half * 2.0 - 16.0, strip_h, strip_w), mat)
 
-static func _add_road_markings(parent: Node3D) -> void:
+static func _add_road_markings(parent: Node3D, chunk_coord: Vector2i) -> void:
 	var line_mat := _mat(Color(0.92, 0.9, 0.35, 1.0), 0.85)
 	var dash_mat := _mat(Color(0.85, 0.85, 0.88, 0.9), 0.9)
-	var y := ROAD_TOP_Y + 0.02
+	var cx := float(chunk_coord.x) * 120.0 + 60.0
+	var cz := float(chunk_coord.y) * 120.0 + 60.0
+	var y := CityTerrainScript.sample_height(cx, cz) + 0.02
 	var half := 60.0
 	var dash_len := 4.0
 	var z := -half + 12.0

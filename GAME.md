@@ -42,9 +42,11 @@ Press **G** while riding to customize frame, wheels, parts, and per-part paint. 
 
 ## World
 
-The open city has procedural sidewalks, road markings, street furniture (trees, lamps, benches, signs), lit building windows, and NPCs that **stand**, **walk**, or **ride bikes** near the player.
+The city is **hilly** — you roll faster downhill and slow down when climbing.
 
-Each save places a **secret purple wizard tower** in one distant chunk (purple marker on the minimap). Enter the tower to open the appearance editor again.
+Districts include **highways** (wide roads on the main axes), **big streets**, **small streets**, **suburbs**, **parks**, **schools**, **stadiums**, and **train stations**. **Diagonal train tracks** cut across the map with gravel beds and rails.
+
+Sidewalks, street furniture, lit windows, and NPCs fill the streets. Each save places a **secret purple wizard tower** in one distant chunk (purple minimap marker).
 
 ## Apartments
 
