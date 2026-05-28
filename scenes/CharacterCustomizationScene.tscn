@@ -1,6 +1,12 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/CharacterCustomizationUI.gd" id="1_charui"]
+[ext_resource type="Script" path="res://scripts/RiderVisualBuilder.gd" id="2_ridervisual"]
+[ext_resource type="Script" path="res://scripts/GarageRoomBuilder.gd" id="3_room"]
+
+[sub_resource type="StandardMaterial3D" id="1_floor"]
+albedo_color = Color(0.14, 0.14, 0.15, 1)
+roughness = 0.95
 
 [node name="CharacterCustomizationScene" type="Control"]
 layout_mode = 3
@@ -11,41 +17,154 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_charui")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MenuPanel" type="Panel" parent="."]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -220.0
-offset_top = -180.0
-offset_right = 220.0
-offset_bottom = 180.0
+anchors_preset = -1
+anchor_right = 0.42
+anchor_bottom = 1.0
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="MenuPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 28
+
+[node name="VBox" type="VBoxContainer" parent="MenuPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="MenuPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "CHARACTER"
+
+[node name="Subtitle" type="Label" parent="MenuPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.7, 0.72, 0.76, 1)
+text = "Customize your rider"
+autowrap_mode = 3
+
+[node name="Options" type="VBoxContainer" parent="MenuPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="OutfitLabel" type="Label" parent="MenuPanel/Margin/VBox/Options"]
+layout_mode = 2
+text = "Outfit style"
+
+[node name="OutfitOption" type="OptionButton" parent="MenuPanel/Margin/VBox/Options"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+
+[node name="HairLabel" type="Label" parent="MenuPanel/Margin/VBox/Options"]
+layout_mode = 2
+text = "Hair / helmet"
+
+[node name="HairOption" type="OptionButton" parent="MenuPanel/Margin/VBox/Options"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+
+[node name="SkinRow" type="HBoxContainer" parent="MenuPanel/Margin/VBox/Options"]
+layout_mode = 2
+
+[node name="SkinLabel" type="Label" parent="MenuPanel/Margin/VBox/Options/SkinRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Skin tone"
+
+[node name="SkinTone" type="ColorPickerButton" parent="MenuPanel/Margin/VBox/Options/SkinRow"]
+custom_minimum_size = Vector2(120, 36)
+layout_mode = 2
+
+[node name="OutfitRow" type="HBoxContainer" parent="MenuPanel/Margin/VBox/Options"]
+layout_mode = 2
+
+[node name="OutfitColorLabel" type="Label" parent="MenuPanel/Margin/VBox/Options/OutfitRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Outfit color"
+
+[node name="OutfitColor" type="ColorPickerButton" parent="MenuPanel/Margin/VBox/Options/OutfitRow"]
+custom_minimum_size = Vector2(120, 36)
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="MenuPanel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ConfirmButton" type="Button" parent="MenuPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "SAVE & RIDE"
+
+[node name="ButtonRow" type="HBoxContainer" parent="MenuPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="CancelButton" type="Button" parent="MenuPanel/Margin/VBox/ButtonRow"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Cancel"
+
+[node name="PreviewPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.42
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
-layout_mode = 2
+[node name="SubViewportContainer" type="SubViewportContainer" parent="PreviewPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
 
-[node name="Title" type="Label" parent="MarginContainer/VBoxContainer"]
-text = "Character Customization"
+[node name="SubViewport" type="SubViewport" parent="PreviewPanel/SubViewportContainer"]
+handle_input_locally = false
+size = Vector2i(960, 900)
+render_target_update_mode = 4
 
-[node name="OutfitOption" type="OptionButton" parent="MarginContainer/VBoxContainer"]
+[node name="World" type="Node3D" parent="PreviewPanel/SubViewportContainer/SubViewport"]
+script = ExtResource("3_room")
 
-[node name="HairOption" type="OptionButton" parent="MarginContainer/VBoxContainer"]
+[node name="Sun" type="DirectionalLight3D" parent="PreviewPanel/SubViewportContainer/SubViewport/World"]
+rotation = Vector3(-0.55, 0.35, 0)
+light_energy = 1.25
 
-[node name="SkinTone" type="ColorPickerButton" parent="MarginContainer/VBoxContainer"]
-text = "Skin Tone"
+[node name="FillLight" type="OmniLight3D" parent="PreviewPanel/SubViewportContainer/SubViewport/World"]
+position = Vector3(1.5, 2.5, 2.0)
+light_energy = 0.65
 
-[node name="OutfitColor" type="ColorPickerButton" parent="MarginContainer/VBoxContainer"]
-text = "Outfit Color"
+[node name="KeyLight" type="SpotLight3D" parent="PreviewPanel/SubViewportContainer/SubViewport/World"]
+position = Vector3(-2.0, 3.5, 1.0)
+rotation = Vector3(-1.1, -0.2, 0)
+light_energy = 1.8
+spot_range = 14.0
 
-[node name="SaveButton" type="Button" parent="MarginContainer/VBoxContainer"]
-text = "Save and Ride"
+[node name="RiderPivot" type="Node3D" parent="PreviewPanel/SubViewportContainer/SubViewport/World"]
+position = Vector3(3.2, 0, 0)
 
-[node name="CancelButton" type="Button" parent="MarginContainer/VBoxContainer"]
-text = "Cancel"
+[node name="RiderVisual" type="Node3D" parent="PreviewPanel/SubViewportContainer/SubViewport/World/RiderPivot"]
+script = ExtResource("2_ridervisual")
 
-[connection signal="pressed" from="MarginContainer/VBoxContainer/SaveButton" to="." method="_on_save_pressed"]
-[connection signal="pressed" from="MarginContainer/VBoxContainer/CancelButton" to="." method="_on_cancel_pressed"]
+[node name="Camera3D" type="Camera3D" parent="PreviewPanel/SubViewportContainer/SubViewport/World"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 2.4)
+fov = 32.0
+current = true
+
+[connection signal="pressed" from="MenuPanel/Margin/VBox/ConfirmButton" to="." method="_on_confirm_pressed"]
+[connection signal="pressed" from="MenuPanel/Margin/VBox/ButtonRow/CancelButton" to="." method="_on_cancel_pressed"]

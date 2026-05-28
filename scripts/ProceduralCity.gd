@@ -1,5 +1,6 @@
 extends Node3D
 signal garage_zone_created(zone: Area3D)
+signal wizard_tower_zone_created(zone: Area3D)
 
 @export var bike_path: NodePath
 @export var chunk_size: float = 120.0
@@ -74,6 +75,8 @@ func _create_chunk(chunk_coord: Vector2i, key: String, center_chunk: Vector2i) -
 	_add_roads(chunk_node)
 	if chunk_coord == Vector2i.ZERO:
 		_add_garage(chunk_node)
+	if chunk_coord == GameState.wizard_tower_chunk():
+		_add_wizard_tower(chunk_node, chunk_coord)
 	_add_city_blocks(chunk_node, chunk_coord, rng)
 	WorldPropBuilderScript.populate_chunk(chunk_node, rng, chunk_coord)
 	_add_chunk_npcs(chunk_node, chunk_coord, center_chunk, rng)
@@ -341,6 +344,64 @@ func _add_garage(parent: Node3D) -> void:
 	zone_shape_node.shape = zone_shape
 	zone.add_child(zone_shape_node)
 	garage_zone_created.emit(zone)
+
+func _add_wizard_tower(parent: Node3D, chunk_coord: Vector2i) -> void:
+	var tower := Node3D.new()
+	tower.name = "WizardTower"
+	tower.position = GameState.wizard_tower_local_position()
+	parent.add_child(tower)
+
+	GameState.wizard_tower_world_position = GameState.wizard_tower_world_position_for_chunk(chunk_coord)
+
+	var stone := _wizard_material(Color(0.42, 0.18, 0.72, 1.0), 0.9, 1.4)
+	var stone_dark := _wizard_material(Color(0.28, 0.1, 0.5, 1.0), 0.95, 0.8)
+	var glow := _wizard_material(Color(0.75, 0.45, 1.0, 1.0), 0.2, 2.2)
+	var roof := _wizard_material(Color(0.22, 0.08, 0.38, 1.0), 0.85, 0.5)
+
+	_add_garage_box(tower, "Foundation", Vector3(0.0, 0.2, 0.0), Vector3(9.0, 0.4, 9.0), stone_dark, true)
+	_add_garage_box(tower, "TowerBase", Vector3(0.0, 2.5, 0.0), Vector3(6.0, 5.0, 6.0), stone, true)
+	_add_garage_box(tower, "TowerMid", Vector3(0.0, 6.8, 0.0), Vector3(4.8, 4.2, 4.8), stone, true)
+	_add_garage_box(tower, "TowerTop", Vector3(0.0, 10.2, 0.0), Vector3(3.6, 3.0, 3.6), stone_dark, true)
+	_add_garage_box(tower, "Roof", Vector3(0.0, 12.8, 0.0), Vector3(4.4, 1.6, 4.4), roof, false)
+	_add_garage_box(tower, "Spire", Vector3(0.0, 14.6, 0.0), Vector3(0.5, 2.4, 0.5), glow, false)
+	_add_garage_box(tower, "DoorGlow", Vector3(0.0, 1.4, 3.15), Vector3(2.2, 2.6, 0.2), glow, false)
+	_add_garage_box(tower, "WindowA", Vector3(-1.2, 5.0, 2.45), Vector3(0.9, 1.2, 0.12), glow, false)
+	_add_garage_box(tower, "WindowB", Vector3(1.2, 7.5, 2.35), Vector3(0.9, 1.2, 0.12), glow, false)
+
+	var sign := MeshInstance3D.new()
+	sign.name = "TowerSign"
+	var sign_mesh := BoxMesh.new()
+	sign_mesh.size = Vector3(4.5, 0.9, 0.2)
+	sign.mesh = sign_mesh
+	sign.position = Vector3(0.0, 13.6, 2.2)
+	sign.material_override = glow
+	tower.add_child(sign)
+
+	var beacon := OmniLight3D.new()
+	beacon.name = "TowerBeacon"
+	beacon.position = Vector3(0.0, 12.0, 2.0)
+	beacon.light_color = Color(0.7, 0.35, 1.0, 1.0)
+	beacon.light_energy = 3.2
+	beacon.omni_range = 22.0
+	tower.add_child(beacon)
+
+	var zone := Area3D.new()
+	zone.name = "WizardTowerEntrance"
+	zone.monitoring = true
+	zone.position = Vector3(0.0, 1.5, 4.2)
+	zone.set_meta("is_wizard_tower_zone", true)
+	tower.add_child(zone)
+	var zone_shape_node := CollisionShape3D.new()
+	var zone_shape := BoxShape3D.new()
+	zone_shape.size = Vector3(5.0, 4.0, 5.0)
+	zone_shape_node.shape = zone_shape
+	zone.add_child(zone_shape_node)
+	wizard_tower_zone_created.emit(zone)
+
+func _wizard_material(color: Color, roughness: float, emission_energy: float) -> StandardMaterial3D:
+	var mat := _garage_material(color, emission_energy)
+	mat.roughness = roughness
+	return mat
 
 func _garage_material(color: Color, emission_energy: float) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()

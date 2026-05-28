@@ -94,7 +94,9 @@ func _apply_preview(preview_data: Dictionary) -> void:
 func _on_new_game_pressed() -> void:
 	var slot := GameState.first_empty_slot()
 	GameState.start_new_game(slot)
-	_go_to_ride()
+	var main: Node = get_tree().current_scene
+	if main and main.has_method("show_character_customization"):
+		main.show_character_customization("new_game")
 
 func _on_slot_pressed(slot: int) -> void:
 	if not GameState.load_slot(slot):

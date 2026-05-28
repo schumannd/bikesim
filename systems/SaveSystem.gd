@@ -28,6 +28,11 @@ func has_slot(slot: int) -> bool:
 	var data := load_slot(slot)
 	return not data.is_empty() and data.has("bike")
 
+func delete_slot(slot: int) -> void:
+	var path := slot_path(slot)
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
 func migrate_legacy_save() -> void:
 	if not FileAccess.file_exists(LEGACY_SAVE_PATH):
 		return

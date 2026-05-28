@@ -16,6 +16,14 @@
 
 The open city includes procedural sidewalks, road markings, street furniture (trees, lamps, benches, signs), lit building windows, and NPCs that **stand**, **walk**, or **ride bikes** along paths near the player.
 
+Each save seeds a **secret purple wizard tower** in one distant chunk (check the minimap for a purple marker). Ride into the tower entrance to open the appearance editor again.
+
+## Character
+
+- **New Game** opens a full character editor (3D preview) before the first ride.
+- Press **C** while riding to edit your character anytime.
+- The **wizard tower** also opens the same editor when you enter it.
+
 ## Main Menu
 
 On launch you get a main menu with:
@@ -55,7 +63,7 @@ On launch you get a main menu with:
   - Default timeout is `30s` (override with `UI_SMOKE_TIMEOUT_SECONDS=45`).
 - What it validates:
   - Game launches through `Main.tscn`
-  - Main menu loads; new game opens the ride scene
+  - Main menu loads; new game opens the character editor then the ride scene
   - Garage menu opens and returns to ride scene
   - Character customization menu opens and returns to ride scene
   - Settings opens and returns to the main menu

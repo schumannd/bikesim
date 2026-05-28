@@ -18,6 +18,14 @@ static func garage_exit_yaw() -> float:
 	var toward_world := Vector3.ZERO - exit_pos
 	return atan2(toward_world.x, toward_world.z)
 
+static func wizard_exit_from_tower(tower_world_pos: Vector3) -> Vector3:
+	return ride_spawn_position(tower_world_pos + Vector3(7.0, 0.0, 7.0))
+
+static func wizard_exit_yaw(tower_world_pos: Vector3) -> float:
+	var exit_pos := wizard_exit_from_tower(tower_world_pos)
+	var away := exit_pos - tower_world_pos
+	return atan2(away.x, away.z)
+
 static func ride_spawn_position(xz: Vector3 = Vector3.ZERO) -> Vector3:
 	return Vector3(xz.x, RIDE_SURFACE_Y, xz.z)
 

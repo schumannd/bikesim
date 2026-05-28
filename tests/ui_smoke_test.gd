@@ -25,7 +25,12 @@ func _run() -> void:
 	var menu: Node = current_screen.get_child(0)
 	menu.call("_on_new_game_pressed")
 	await process_frame
-	_assert(current_screen.get_child(0).name == "RideScene", "New game should open ride scene")
+	_assert(current_screen.get_child(0).name == "CharacterCustomizationScene", "New game should open character editor")
+
+	var character_setup: Node = current_screen.get_child(0)
+	character_setup.call("_on_confirm_pressed")
+	await process_frame
+	_assert(current_screen.get_child(0).name == "RideScene", "Confirming character should open ride scene")
 
 	main.call("show_garage")
 	await process_frame
@@ -37,7 +42,7 @@ func _run() -> void:
 	await process_frame
 	_assert(current_screen.get_child(0).name == "RideScene", "Leave garage should return to ride scene")
 
-	main.call("show_character_customization")
+	main.call("show_character_customization", "ride")
 	await process_frame
 	_assert(current_screen.get_child_count() == 1, "Character nav keeps one active screen")
 	_assert(current_screen.get_child(0).name == "CharacterCustomizationScene", "Character menu should open")

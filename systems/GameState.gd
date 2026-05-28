@@ -10,6 +10,11 @@ var world_seed: int = 13371337
 var active_slot: int = -1
 var pending_garage_exit: bool = false
 var garage_exit_spawn: Vector3 = Vector3.ZERO
+var pending_wizard_exit: bool = false
+var wizard_exit_spawn: Vector3 = Vector3.ZERO
+var wizard_tower_world_position: Vector3 = Vector3.ZERO
+var character_edit_context: String = "ride"
+var is_new_game_setup: bool = false
 
 func queue_garage_exit() -> void:
 	pending_garage_exit = true
@@ -23,6 +28,40 @@ func consume_garage_exit_spawn() -> Vector3:
 	garage_exit_spawn = Vector3.ZERO
 	return spawn
 
+func queue_wizard_exit(tower_world_pos: Vector3) -> void:
+	pending_wizard_exit = true
+	wizard_exit_spawn = BikeRigScript.wizard_exit_from_tower(tower_world_pos)
+
+func consume_wizard_exit_spawn() -> Vector3:
+	if not pending_wizard_exit:
+		return Vector3.INF
+	pending_wizard_exit = false
+	var spawn := wizard_exit_spawn
+	wizard_exit_spawn = Vector3.ZERO
+	return spawn
+
+func begin_character_edit(context: String) -> void:
+	character_edit_context = context
+
+func wizard_tower_chunk() -> Vector2i:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(world_seed) ^ 0x7A1E50F1
+	var chunk := Vector2i(rng.randi_range(-8, 8), rng.randi_range(-8, 8))
+	if chunk == Vector2i.ZERO:
+		chunk = Vector2i(3, 2)
+	return chunk
+
+func wizard_tower_local_position() -> Vector3:
+	return Vector3(42.0, 0.0, 36.0)
+
+func wizard_tower_world_position_for_chunk(chunk_coord: Vector2i) -> Vector3:
+	var local := wizard_tower_local_position()
+	return Vector3(
+		float(chunk_coord.x) * 120.0 + local.x,
+		BikeRigScript.RIDE_SURFACE_Y,
+		float(chunk_coord.y) * 120.0 + local.z
+	)
+
 func _ready() -> void:
 	SaveSystem.migrate_legacy_save()
 	reset_to_defaults()
@@ -34,14 +73,23 @@ func reset_to_defaults() -> void:
 
 func start_new_game(slot: int) -> void:
 	active_slot = slot
+	is_new_game_setup = true
 	reset_to_defaults()
 	persist()
+
+func abandon_new_game() -> void:
+	if active_slot >= 0:
+		SaveSystem.delete_slot(active_slot)
+	active_slot = -1
+	is_new_game_setup = false
+	reset_to_defaults()
 
 func load_slot(slot: int) -> bool:
 	var data: Dictionary = SaveSystem.load_slot(slot)
 	if data.is_empty() or not data.has("bike"):
 		return false
 	active_slot = slot
+	is_new_game_setup = false
 	if data.has("bike"):
 		bike_config.from_dict(data["bike"])
 	if data.has("character"):
