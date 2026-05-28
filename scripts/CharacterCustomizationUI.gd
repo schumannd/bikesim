@@ -20,6 +20,8 @@ const PREVIEW_CENTER_X := 3.2
 @onready var viewport_container: SubViewportContainer = $PreviewPanel/SubViewportContainer
 
 var _preview_spin: float = 0.0
+var _nav_fields: Array[String] = ["outfit", "hair", "skin", "outfit_color", "confirm", "cancel"]
+var _nav_index: int = 0
 
 func _ready() -> void:
 	SoundEffects.wire_menu_buttons(self)
@@ -37,11 +39,104 @@ func _ready() -> void:
 	outfit_picker.color_changed.connect(func(_c: Color) -> void: _refresh_preview())
 	resized.connect(_on_resized)
 	set_process(true)
+	set_process_unhandled_input(true)
+	_apply_nav_selection()
 
 func _process(delta: float) -> void:
 	_preview_spin += delta * 0.35
 	if rider_pivot:
 		rider_pivot.rotation.y = _preview_spin
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	match event.keycode:
+		KEY_W, KEY_UP:
+			_nav_index = posmod(_nav_index - 1, _nav_fields.size())
+			SoundEffects.play_menu_move()
+			_apply_nav_selection()
+		KEY_S, KEY_DOWN:
+			_nav_index = posmod(_nav_index + 1, _nav_fields.size())
+			SoundEffects.play_menu_move()
+			_apply_nav_selection()
+		KEY_A, KEY_LEFT:
+			_step_field(-1)
+		KEY_D, KEY_RIGHT:
+			_step_field(1)
+		KEY_ENTER, KEY_KP_ENTER:
+			SoundEffects.play_menu_confirm()
+			if _nav_fields[_nav_index] == "confirm":
+				_on_confirm_pressed()
+			elif _nav_fields[_nav_index] == "cancel":
+				_on_cancel_pressed()
+		KEY_ESCAPE:
+			_on_cancel_pressed()
+
+func _step_field(direction: int) -> void:
+	var field: String = _nav_fields[_nav_index]
+	match field:
+		"outfit":
+			_cycle_option(outfit_option, direction)
+		"hair":
+			_cycle_option(hair_option, direction)
+		"skin":
+			skin_picker.color = _nudge_color(skin_picker.color, direction)
+		"outfit_color":
+			outfit_picker.color = _nudge_color(outfit_picker.color, direction)
+		_:
+			return
+	SoundEffects.play_menu_move()
+	_refresh_preview()
+
+func _cycle_option(option: OptionButton, direction: int) -> void:
+	if option.item_count == 0:
+		return
+	option.select(posmod(option.selected + direction, option.item_count))
+
+func _nudge_color(color: Color, direction: int) -> Color:
+	var step := 0.06 * float(direction)
+	return Color(
+		clampf(color.r + step, 0.0, 1.0),
+		clampf(color.g + step, 0.0, 1.0),
+		clampf(color.b + step, 0.0, 1.0),
+		color.a
+	)
+
+func _apply_nav_selection() -> void:
+	_reset_field_styles()
+	var field: String = _nav_fields[_nav_index]
+	match field:
+		"outfit":
+			_style_selected(outfit_option)
+		"hair":
+			_style_selected(hair_option)
+		"skin":
+			_style_selected(skin_picker)
+		"outfit_color":
+			_style_selected(outfit_picker)
+		"confirm":
+			_style_selected(confirm_button)
+		"cancel":
+			_style_selected(cancel_button)
+
+func _reset_field_styles() -> void:
+	_style_normal(outfit_option)
+	_style_normal(hair_option)
+	_style_normal(skin_picker)
+	_style_normal(outfit_picker)
+	_style_normal(confirm_button)
+	_style_normal(cancel_button)
+
+func _style_normal(control: Control) -> void:
+	control.remove_theme_color_override("font_color")
+	control.remove_theme_color_override("font_outline_color")
+	if control is Button:
+		control.add_theme_font_size_override("font_size", 18 if control != confirm_button else 22)
+
+func _style_selected(control: Control) -> void:
+	control.add_theme_color_override("font_color", Color(1.0, 0.72, 0.28, 1.0))
+	if control is Button:
+		control.add_theme_font_size_override("font_size", 22 if control == confirm_button else 20)
 
 func _style_panels() -> void:
 	var menu_style := StyleBoxFlat.new()
@@ -71,17 +166,17 @@ func _apply_context_ui() -> void:
 	match GameState.character_edit_context:
 		"new_game":
 			title_label.text = "CREATE YOUR RIDER"
-			subtitle_label.text = "Customize before your first ride"
+			subtitle_label.text = "W/S navigate — A/D change — Enter confirm"
 			confirm_button.text = "START RIDING"
 			cancel_button.text = "Back to menu"
 		"wizard_tower":
 			title_label.text = "WIZARD'S MIRROR"
-			subtitle_label.text = "The tower reshapes your appearance"
+			subtitle_label.text = "W/S navigate — A/D change — Enter confirm"
 			confirm_button.text = "ACCEPT NEW FORM"
 			cancel_button.text = "Leave unchanged"
 		_:
 			title_label.text = "CHARACTER"
-			subtitle_label.text = "Edit outfit, hair, and colors"
+			subtitle_label.text = "W/S navigate — A/D change — Enter confirm"
 			confirm_button.text = "SAVE & RIDE"
 			cancel_button.text = "Cancel"
 

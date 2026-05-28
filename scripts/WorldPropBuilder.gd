@@ -49,39 +49,35 @@ static func _random_prop_position(rng: RandomNumberGenerator, chunk_coord: Vecto
 static func add_tree_at(parent: Node3D, local_pos: Vector3, rng: RandomNumberGenerator) -> void:
 	_add_tree(parent, local_pos, rng)
 
-static func _add_sidewalk_strips(parent: Node3D, chunk_coord: Vector2i, rng: RandomNumberGenerator) -> void:
+static func _add_sidewalk_strips(parent: Node3D, _chunk_coord: Vector2i, _rng: RandomNumberGenerator) -> void:
 	var mat := _mat(Color(0.42, 0.43, 0.44, 1.0), 0.98)
 	var strip_w := 3.5
 	var strip_h := 0.08
-	var half := 60.0
+	var center := 60.0
 	var road_half := 10.0
 	var offset := road_half + strip_w * 0.5 + 0.5
-	var cx := float(chunk_coord.x) * 120.0 + 60.0
-	var cz := float(chunk_coord.y) * 120.0 + 60.0
-	var y0 := CityTerrainScript.sample_height(cx + offset, cz) + strip_h * 0.5
-	_add_box(parent, Vector3(offset, y0, 60.0), Vector3(strip_w, strip_h, half * 2.0 - 16.0), mat)
-	_add_box(parent, Vector3(-offset, y0, 60.0), Vector3(strip_w, strip_h, half * 2.0 - 16.0), mat)
-	_add_box(parent, Vector3(60.0, CityTerrainScript.sample_height(cx, cz + offset) + strip_h * 0.5, offset), Vector3(half * 2.0 - 16.0, strip_h, strip_w), mat)
-	_add_box(parent, Vector3(60.0, CityTerrainScript.sample_height(cx, cz - offset) + strip_h * 0.5, -offset), Vector3(half * 2.0 - 16.0, strip_h, strip_w), mat)
+	var y0 := strip_h * 0.5
+	_add_box(parent, Vector3(center + offset, y0, center), Vector3(strip_w, strip_h, 88.0), mat)
+	_add_box(parent, Vector3(center - offset, y0, center), Vector3(strip_w, strip_h, 88.0), mat)
+	_add_box(parent, Vector3(center, y0, center + offset), Vector3(88.0, strip_h, strip_w), mat)
+	_add_box(parent, Vector3(center, y0, center - offset), Vector3(88.0, strip_h, strip_w), mat)
 
-static func _add_road_markings(parent: Node3D, chunk_coord: Vector2i) -> void:
+static func _add_road_markings(parent: Node3D, _chunk_coord: Vector2i) -> void:
 	var line_mat := _mat(Color(0.92, 0.9, 0.35, 1.0), 0.85)
 	var dash_mat := _mat(Color(0.85, 0.85, 0.88, 0.9), 0.9)
-	var cx := float(chunk_coord.x) * 120.0 + 60.0
-	var cz := float(chunk_coord.y) * 120.0 + 60.0
-	var y := CityTerrainScript.sample_height(cx, cz) + 0.02
-	var half := 60.0
+	var center := 60.0
+	var y := 0.02
 	var dash_len := 4.0
-	var z := -half + 12.0
-	while z < half - 8.0:
-		_add_box(parent, Vector3(0.0, y, z), Vector3(0.12, 0.02, dash_len), line_mat)
+	var z := 12.0
+	while z < 108.0:
+		_add_box(parent, Vector3(center, y, z), Vector3(0.12, 0.02, dash_len), line_mat)
 		z += dash_len * 2.2
-	z = -half + 12.0
-	while z < half - 8.0:
-		_add_box(parent, Vector3(z, y, 0.0), Vector3(dash_len, 0.02, 0.12), line_mat)
+	z = 12.0
+	while z < 108.0:
+		_add_box(parent, Vector3(z, y, center), Vector3(dash_len, 0.02, 0.12), line_mat)
 		z += dash_len * 2.2
-	_add_box(parent, Vector3(0.0, y, 0.0), Vector3(0.2, 0.02, 14.0), dash_mat)
-	_add_box(parent, Vector3(0.0, y, 0.0), Vector3(14.0, 0.02, 0.2), dash_mat)
+	_add_box(parent, Vector3(center, y, center), Vector3(0.2, 0.02, 14.0), dash_mat)
+	_add_box(parent, Vector3(center, y, center), Vector3(14.0, 0.02, 0.2), dash_mat)
 
 static func _add_tree(parent: Node3D, pos: Vector3, rng: RandomNumberGenerator) -> void:
 	var trunk_mat := _mat(Color(0.35, 0.22, 0.12, 1.0), 0.95)

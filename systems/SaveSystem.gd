@@ -28,7 +28,9 @@ func load_slot(slot: int) -> Dictionary:
 	return parsed if parsed is Dictionary else {}
 
 func is_playable_save(data: Dictionary) -> bool:
-	if data.is_empty() or not data.has("bike"):
+	if data.is_empty() or not data.has("bike") or not data.has("character"):
+		return false
+	if int(data.get("version", 0)) < SAVE_VERSION:
 		return false
 	return bool(data.get("ready", false))
 

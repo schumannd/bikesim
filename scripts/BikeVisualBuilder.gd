@@ -1,6 +1,7 @@
 extends Node3D
 
 const BikeRigScript := preload("res://scripts/BikeRig.gd")
+const BikePaintLibraryScript := preload("res://scripts/BikePaintLibrary.gd")
 
 const CYL_RADIAL := 20
 const CYL_RINGS := 8
@@ -13,7 +14,6 @@ func get_wheel_radius() -> float:
 func apply_config(config: Resource) -> void:
 	_clear_parts()
 
-	var paint_color: Color = config.get("paint_color")
 	var frame_id: String = str(config.get("frame_id"))
 	var wheel_id: String = str(config.get("wheel_id"))
 	var fork_id: String = str(config.get("fork_id"))
@@ -27,8 +27,24 @@ func apply_config(config: Resource) -> void:
 	if pedal_id.is_empty():
 		pedal_id = "platform"
 
-	var frame_mat := _make_material(paint_color, 0.52)
-	var frame_accent := _make_material(paint_color.lightened(0.25), 0.45)
+	var legacy_paint: Color = _read_color(config, "paint_color", Color(0.1, 0.5, 0.9, 1.0))
+	var frame_color: Color = _read_color(config, "frame_paint_color", legacy_paint)
+	var fork_color: Color = _read_color(config, "fork_paint_color", frame_color)
+	var rim_color: Color = _read_color(config, "rim_paint_color", Color(0.32, 0.34, 0.36, 1.0))
+	var bar_color: Color = _read_color(config, "handlebar_paint_color", frame_color)
+	var seat_color: Color = _read_color(config, "seat_paint_color", frame_color)
+	var frame_finish: String = _read_finish(config, "frame_paint_finish", "gloss")
+	var fork_finish: String = _read_finish(config, "fork_paint_finish", "gloss")
+	var rim_finish: String = _read_finish(config, "rim_paint_finish", "metallic")
+	var bar_finish: String = _read_finish(config, "handlebar_paint_finish", "gloss")
+	var seat_finish: String = _read_finish(config, "seat_paint_finish", "matte")
+
+	var frame_mat := BikePaintLibraryScript.make_material(frame_color, frame_finish)
+	var frame_accent := BikePaintLibraryScript.make_material(frame_color.lightened(0.22), frame_finish)
+	var fork_mat := BikePaintLibraryScript.make_material(fork_color, fork_finish)
+	var rim_mat := BikePaintLibraryScript.make_material(rim_color, rim_finish)
+	var bar_mat := BikePaintLibraryScript.make_material(bar_color, bar_finish)
+	var seat_mat := BikePaintLibraryScript.make_material(seat_color, seat_finish)
 	var metal_mat := _make_material(Color(0.16, 0.17, 0.18, 1.0), 0.18)
 	var metal_shine := _make_material(Color(0.32, 0.34, 0.36, 1.0), 0.12)
 	var rubber_mat := _make_material(Color(0.04, 0.04, 0.04, 1.0), 0.98)
@@ -68,15 +84,25 @@ func apply_config(config: Resource) -> void:
 	_wheel_radius = wheel_radius
 
 	_add_frame(frame_height, top_tube_drop, front_wheel_z, rear_wheel_z, wheel_radius, frame_mat, frame_accent, metal_mat)
-	_add_fork(front_wheel_z, wheel_radius, fork_id, frame_mat, metal_mat, metal_shine)
+	_add_fork(front_wheel_z, wheel_radius, fork_id, fork_mat, metal_mat, metal_shine)
 	_add_rear_triangle(rear_wheel_z, wheel_radius, frame_mat, metal_mat)
 	_add_drivetrain(rear_wheel_z, wheel_radius, metal_mat, metal_shine)
-	_add_cockpit(front_wheel_z, frame_height, handlebar_id, frame_mat, frame_accent, metal_mat, metal_shine, rubber_mat)
-	_add_wheel("Rear", rear_wheel_z, wheel_radius, tire_width, metal_shine, metal_mat, rubber_mat, rubber_side)
-	_add_wheel("Front", front_wheel_z, wheel_radius, tire_width, metal_shine, metal_mat, rubber_mat, rubber_side)
-	_add_seat(frame_height, seat_id, frame_mat, frame_accent, metal_mat)
+	_add_cockpit(front_wheel_z, frame_height, handlebar_id, bar_mat, frame_accent, metal_mat, metal_shine, rubber_mat)
+	_add_wheel("Rear", rear_wheel_z, wheel_radius, tire_width, rim_mat, metal_mat, rubber_mat, rubber_side)
+	_add_wheel("Front", front_wheel_z, wheel_radius, tire_width, rim_mat, metal_mat, rubber_mat, rubber_side)
+	_add_seat(frame_height, seat_id, seat_mat, frame_accent, metal_mat)
 	_add_pedals(pedal_id, metal_mat, metal_shine)
 	_add_seat_anchor(frame_height)
+
+func _read_color(config: Resource, key: String, fallback: Color) -> Color:
+	var value = config.get(key)
+	return value if value is Color else fallback
+
+func _read_finish(config: Resource, key: String, fallback: String) -> String:
+	var value = config.get(key)
+	if value == null or str(value).is_empty():
+		return fallback
+	return str(value)
 
 func mount_rider(rider: Node3D) -> void:
 	var bike := get_parent()
@@ -97,7 +123,7 @@ func _add_frame(frame_height: float, top_tube_drop: float, front_z: float, rear_
 	_add_tube(Vector3(0.04, frame_height + 0.1, 0.0), Vector3(0.04, 0.5, -0.1), 0.006, metal)
 	_add_tube(Vector3(-0.04, frame_height + 0.1, 0.0), Vector3(-0.04, 0.5, -0.1), 0.006, metal)
 
-func _add_fork(front_z: float, wheel_r: float, fork_id: String, frame_mat: Material, metal: Material, shine: Material) -> void:
+func _add_fork(front_z: float, wheel_r: float, fork_id: String, fork_mat: Material, metal: Material, shine: Material) -> void:
 	var crown_y: float = 0.94
 	var leg_spread: float = 0.065
 	match fork_id:
@@ -113,7 +139,7 @@ func _add_fork(front_z: float, wheel_r: float, fork_id: String, frame_mat: Mater
 		_:
 			pass
 
-	_add_tube(Vector3(0.0, crown_y, front_z - 0.04), Vector3(0.0, wheel_r + 0.15, front_z - 0.1), 0.032, frame_mat)
+	_add_tube(Vector3(0.0, crown_y, front_z - 0.04), Vector3(0.0, wheel_r + 0.15, front_z - 0.1), 0.032, fork_mat)
 	_add_tube(Vector3(-leg_spread, wheel_r + 0.15, front_z - 0.1), Vector3(-leg_spread, wheel_r + 0.02, front_z), 0.022, metal)
 	_add_tube(Vector3(leg_spread, wheel_r + 0.15, front_z - 0.1), Vector3(leg_spread, wheel_r + 0.02, front_z), 0.022, metal)
 	_add_tube(Vector3(-leg_spread, wheel_r + 0.08, front_z - 0.04), Vector3(leg_spread, wheel_r + 0.08, front_z - 0.04), 0.018, shine)
@@ -151,7 +177,7 @@ func _add_drivetrain(rear_z: float, wheel_radius: float, metal: Material, shine:
 	_add_tube(Vector3(0.0, 0.43, 0.05), Vector3(0.05, 0.4, 0.0), 0.005, metal)
 	_add_box_mesh("Derailleur", Vector3(0.06, hub_y - 0.02, rear_z + 0.06), Vector3(0.04, 0.08, 0.05), shine)
 
-func _add_cockpit(front_z: float, frame_height: float, handlebar_id: String, frame_mat: Material, accent: Material, metal: Material, shine: Material, rubber: Material) -> void:
+func _add_cockpit(front_z: float, frame_height: float, handlebar_id: String, bar_mat: Material, accent: Material, metal: Material, shine: Material, rubber: Material) -> void:
 	_add_tube(Vector3(0.0, frame_height + 0.02, front_z - 0.04), Vector3(0.0, frame_height + 0.22, front_z - 0.02), 0.024, metal)
 	_add_cylinder_mesh("Stem", Vector3(0.0, frame_height + 0.2, front_z - 0.03), Vector3(0.03, 0.1, 0.03), metal)
 
@@ -172,7 +198,7 @@ func _add_cockpit(front_z: float, frame_height: float, handlebar_id: String, fra
 
 	var bar_y: float = frame_height + 0.22 + rise
 	var bar_z: float = front_z - 0.02
-	_add_tube(Vector3(-width * 0.5, bar_y, bar_z), Vector3(width * 0.5, bar_y, bar_z), 0.024, frame_mat)
+	_add_tube(Vector3(-width * 0.5, bar_y, bar_z), Vector3(width * 0.5, bar_y, bar_z), 0.024, bar_mat)
 	_add_tube(Vector3(-width * 0.5, bar_y, bar_z), Vector3(-width * 0.5, bar_y - 0.04, bar_z + 0.04), 0.02, accent)
 	_add_tube(Vector3(width * 0.5, bar_y, bar_z), Vector3(width * 0.5, bar_y - 0.04, bar_z + 0.04), 0.02, accent)
 	_add_cylinder_mesh("GripL", Vector3(-width * 0.5 - 0.03, bar_y, bar_z), Vector3(0.02, 0.1, 0.02), rubber)
@@ -218,7 +244,7 @@ func _add_wheel(prefix: String, wheel_z: float, wheel_radius: float, tire_width:
 		var ky := sin(a) * outer_r
 		_add_box_to(spin, "Knob%d" % i, Vector3(kx, ky, 0.0), Vector3(0.025, 0.015, tire_width * 0.9), tire_mat)
 
-func _add_seat(frame_height: float, seat_id: String, frame_mat: Material, accent: Material, metal: Material) -> void:
+func _add_seat(frame_height: float, seat_id: String, seat_mat: Material, accent: Material, metal: Material) -> void:
 	_add_tube(Vector3(0.0, frame_height + 0.02, -0.4), Vector3(0.0, frame_height + 0.2, -0.44), 0.024, metal)
 	_add_tube(Vector3(-0.05, frame_height + 0.2, -0.44), Vector3(0.05, frame_height + 0.2, -0.44), 0.008, metal)
 
@@ -232,9 +258,9 @@ func _add_seat(frame_height: float, seat_id: String, frame_mat: Material, accent
 			seat_size = Vector3(0.16, 0.04, 0.3)
 
 	var seat_pos := Vector3(0.0, frame_height + 0.22, -0.46)
-	_add_box_mesh("SeatBase", seat_pos, seat_size, frame_mat)
+	_add_box_mesh("SeatBase", seat_pos, seat_size, seat_mat)
 	_add_box_mesh("SeatPadding", seat_pos + Vector3(0.0, seat_size.y * 0.35, 0.0), seat_size * Vector3(0.92, 0.5, 0.92), accent)
-	_add_box_mesh("SeatNose", seat_pos + Vector3(0.0, 0.0, -seat_size.z * 0.35), Vector3(seat_size.x * 0.5, seat_size.y * 0.7, seat_size.z * 0.3), frame_mat)
+	_add_box_mesh("SeatNose", seat_pos + Vector3(0.0, 0.0, -seat_size.z * 0.35), Vector3(seat_size.x * 0.5, seat_size.y * 0.7, seat_size.z * 0.3), seat_mat)
 
 func _add_pedals(pedal_id: String, metal: Material, shine: Material) -> void:
 	var pedal_size := Vector3(0.09, 0.03, 0.14)

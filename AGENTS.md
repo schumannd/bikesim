@@ -1,0 +1,3 @@
+- Always test and commit and push your changes.
+- write concise but detailed commit messages
+- keep the code clean

@@ -31,6 +31,7 @@ var _nav_index: int = 0
 
 func _ready() -> void:
 	SoundEffects.wire_menu_buttons(self)
+	SaveSystem.sanitize_slots()
 	_style_menu()
 	_setup_preview_camera()
 	for slot in range(slot_buttons.size()):

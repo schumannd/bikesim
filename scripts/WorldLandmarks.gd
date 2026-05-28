@@ -2,6 +2,7 @@ extends Object
 class_name WorldLandmarks
 
 const CityTerrainScript := preload("res://scripts/CityTerrain.gd")
+const BikeRigScript := preload("res://scripts/BikeRig.gd")
 
 static func add_train_tracks(parent: Node3D, chunk_coord: Vector2i, chunk_size: float) -> void:
 	var root := Node3D.new()
@@ -21,27 +22,27 @@ static func add_train_tracks(parent: Node3D, chunk_coord: Vector2i, chunk_size: 
 			if not CityTerrainScript.is_train_corridor(wx, wz):
 				z += step
 				continue
-			var h := CityTerrainScript.sample_height(wx, wz)
+			var h := CityTerrainScript.sample_height(wx, wz) - 0.4
 			_add_box(root, Vector3(x, h + 0.06, z), Vector3(6.5, 0.1, step + 0.5), rail_mat)
 			if int(x) % 16 == 0:
 				_add_box(root, Vector3(x, h + 0.04, z), Vector3(0.35, 0.08, step + 0.2), tie_mat)
 			z += step
 		x += step
 	# Rails (thin metal strips)
-	x = 0.0
-	while x <= chunk_size + 0.1:
-		z = 0.0
-		while z <= chunk_size + 0.1:
-			var wx := ox + x
-			var wz := oz + z
-			if not CityTerrainScript.is_train_corridor(wx, wz):
-				z += step * 0.5
+	var x2 := 0.0
+	while x2 <= chunk_size + 0.1:
+		var z2 := 0.0
+		while z2 <= chunk_size + 0.1:
+			var wx2 := ox + x2
+			var wz2 := oz + z2
+			if not CityTerrainScript.is_train_corridor(wx2, wz2):
+				z2 += step * 0.5
 				continue
-			var h := CityTerrainScript.sample_height(wx, wz)
-			var offset := 0.9 if fposmod(wx - wz, 2.0) > 1.0 else -0.9
-			_add_box(root, Vector3(x + offset, h + 0.11, z), Vector3(0.08, 0.06, step * 0.6), _mat(Color(0.55, 0.56, 0.58, 1.0), 0.4))
-			z += step * 0.5
-		x += step * 0.5
+			var h2 := CityTerrainScript.sample_height(wx2, wz2) - 0.4
+			var offset := 0.9 if fposmod(wx2 - wz2, 2.0) > 1.0 else -0.9
+			_add_box(root, Vector3(x2 + offset, h2 + 0.11, z2), Vector3(0.08, 0.06, step * 0.6), _mat(Color(0.55, 0.56, 0.58, 1.0), 0.4))
+			z2 += step * 0.5
+		x2 += step * 0.5
 
 static func add_school(parent: Node3D, local_center: Vector3, chunk_coord: Vector2i, chunk_size: float) -> void:
 	var base := _terrain_base(local_center, chunk_coord, chunk_size)
@@ -91,6 +92,7 @@ static func _add_colored_building(parent: Node3D, pos: Vector3, size: Vector3, m
 	var box := BoxMesh.new()
 	box.size = size
 	mesh.mesh = box
+	mesh.position = Vector3(0.0, size.y * 0.5, 0.0)
 	mesh.material_override = mat
 	body.add_child(mesh)
 
@@ -116,11 +118,8 @@ static func _add_box(parent: Node3D, pos: Vector3, size: Vector3, mat: Material)
 	mesh.material_override = mat
 	parent.add_child(mesh)
 
-static func _terrain_base(local_center: Vector3, chunk_coord: Vector2i, chunk_size: float) -> Vector3:
-	var wx := chunk_coord.x * chunk_size + local_center.x
-	var wz := chunk_coord.y * chunk_size + local_center.z
-	var h := CityTerrainScript.sample_height(wx, wz)
-	return Vector3(local_center.x, h, local_center.z)
+static func _terrain_base(local_center: Vector3, _chunk_coord: Vector2i, _chunk_size: float) -> Vector3:
+	return Vector3(local_center.x, BikeRigScript.RIDE_SURFACE_Y, local_center.z)
 
 static func _mat(color: Color, roughness: float) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()

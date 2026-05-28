@@ -87,7 +87,8 @@ func _apply_visuals() -> void:
 	if bike.has_method("set_wheel_radius"):
 		bike.call("set_wheel_radius", wheel_radius)
 	spawn_position = BikeRigScript.ride_spawn_position(spawn_position)
-	bike.call("set_reset_position", spawn_position)
+	if bike.has_method("set_reset_position"):
+		bike.call("set_reset_position", spawn_position)
 	_apply_exit_spawns_if_pending()
 
 func _apply_exit_spawns_if_pending() -> void:
@@ -110,7 +111,8 @@ func _apply_exit_spawns_if_pending() -> void:
 		bike.rotation.y = BikeRigScript.wizard_exit_yaw(GameState.wizard_tower_world_position)
 		_wizard_auto_enter_block_until = Time.get_ticks_msec() / 1000.0 + 2.5
 	spawn_position = bike.global_position
-	bike.call("set_reset_position", spawn_position)
+	if bike.has_method("set_reset_position"):
+		bike.call("set_reset_position", spawn_position)
 	_refresh_minimap_pois()
 
 func _on_quest_state_changed() -> void:
