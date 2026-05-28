@@ -17,6 +17,10 @@ func _physics_process(delta: float) -> void:
 	speed += throttle * acceleration * delta
 	if braking:
 		speed = move_toward(speed, 0.0, brake_power * delta)
+	elif abs(throttle) < 0.01:
+		# Rolling resistance so the bike naturally slows down.
+		speed = move_toward(speed, 0.0, 6.0 * delta)
+	speed = move_toward(speed, 0.0, abs(speed) * 0.18 * delta)
 	speed = clamp(speed, -max_speed * 0.3, max_speed)
 	rotate_y(-steer * steering_speed * delta * (abs(speed) / max_speed + 0.25))
 

@@ -1,5 +1,7 @@
 extends Node3D
 
+var _base_rotations: Dictionary = {}
+
 func apply_config(config: Resource) -> void:
 	_clear_parts()
 	var skin_tone: Color = config.get("skin_tone")
@@ -33,6 +35,7 @@ func apply_config(config: Resource) -> void:
 			_add_box("HairLong", Vector3(0.0, 1.12, 0.02), Vector3(0.16, 0.18, 0.08), _make_material(Color(0.18, 0.09, 0.04, 1.0), 0.9))
 		_:
 			_add_box("HairShort", Vector3(0.0, 1.33, 0.14), Vector3(0.18, 0.06, 0.16), _make_material(Color(0.18, 0.09, 0.04, 1.0), 0.9))
+	_cache_base_rotations()
 
 func _add_capsule(name: String, pos: Vector3, radius: float, height: float, mat: Material, rot: Vector3 = Vector3.ZERO) -> void:
 	var node := MeshInstance3D.new()
@@ -76,3 +79,28 @@ func _make_material(color: Color, roughness: float) -> StandardMaterial3D:
 	mat.albedo_color = color
 	mat.roughness = roughness
 	return mat
+
+func animate_pedaling(phase: float, intensity: float) -> void:
+	var pedal: float = clampf(intensity, 0.0, 1.0)
+	_set_node_rot_x("ThighL", sin(phase) * 0.7 * pedal)
+	_set_node_rot_x("ThighR", sin(phase + PI) * 0.7 * pedal)
+	_set_node_rot_x("CalfL", sin(phase + PI * 0.35) * 0.45 * pedal)
+	_set_node_rot_x("CalfR", sin(phase + PI * 1.35) * 0.45 * pedal)
+	_set_node_rot_x("UpperArmL", sin(phase + PI) * 0.18 * pedal)
+	_set_node_rot_x("UpperArmR", sin(phase) * 0.18 * pedal)
+	_set_node_rot_x("ForearmL", sin(phase + PI) * 0.12 * pedal)
+	_set_node_rot_x("ForearmR", sin(phase) * 0.12 * pedal)
+
+func _cache_base_rotations() -> void:
+	_base_rotations.clear()
+	for child in get_children():
+		if child is Node3D:
+			_base_rotations[child.name] = (child as Node3D).rotation
+
+func _set_node_rot_x(node_name: String, offset_x: float) -> void:
+	var node := get_node_or_null(node_name)
+	if node == null or not (node is Node3D):
+		return
+	var n := node as Node3D
+	var base: Vector3 = _base_rotations.get(node_name, n.rotation)
+	n.rotation = Vector3(base.x + offset_x, base.y, base.z)

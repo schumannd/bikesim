@@ -1,5 +1,7 @@
 extends Node3D
 
+var _wheel_spin: float = 0.0
+
 func apply_config(config: Resource) -> void:
 	_clear_parts()
 
@@ -125,20 +127,47 @@ func _add_seat(frame_height: float, frame_mat: Material, metal_mat: Material) ->
 	add_child(seat)
 
 func _add_pedals(metal_mat: Material) -> void:
-	_add_tube(Vector3(0.0, 0.42, -0.03), Vector3(0.18, 0.42, -0.03), 0.01, metal_mat)
-	_add_tube(Vector3(0.0, 0.42, -0.03), Vector3(-0.18, 0.42, -0.03), 0.01, metal_mat)
-	var right := MeshInstance3D.new()
+	var crank_right := Node3D.new()
+	crank_right.name = "CrankRightPivot"
+	crank_right.position = Vector3(0.0, 0.42, -0.03)
+	add_child(crank_right)
+
+	var crank_arm_right := MeshInstance3D.new()
+	crank_arm_right.name = "CrankRightArm"
+	var arm_mesh := BoxMesh.new()
+	arm_mesh.size = Vector3(0.24, 0.022, 0.03)
+	crank_arm_right.mesh = arm_mesh
+	crank_arm_right.position = Vector3(0.12, 0.0, 0.0)
+	crank_arm_right.material_override = metal_mat
+	crank_right.add_child(crank_arm_right)
+
+	var pedal_right := MeshInstance3D.new()
+	pedal_right.name = "PedalRight"
 	var pedal_mesh := BoxMesh.new()
-	pedal_mesh.size = Vector3(0.08, 0.02, 0.13)
-	right.mesh = pedal_mesh
-	right.position = Vector3(0.2, 0.42, -0.03)
-	right.material_override = metal_mat
-	add_child(right)
-	var left := MeshInstance3D.new()
-	left.mesh = pedal_mesh
-	left.position = Vector3(-0.2, 0.42, -0.03)
-	left.material_override = metal_mat
-	add_child(left)
+	pedal_mesh.size = Vector3(0.09, 0.03, 0.14)
+	pedal_right.mesh = pedal_mesh
+	pedal_right.position = Vector3(0.24, 0.0, 0.0)
+	pedal_right.material_override = metal_mat
+	crank_right.add_child(pedal_right)
+
+	var crank_left := Node3D.new()
+	crank_left.name = "CrankLeftPivot"
+	crank_left.position = Vector3(0.0, 0.42, -0.03)
+	add_child(crank_left)
+
+	var crank_arm_left := MeshInstance3D.new()
+	crank_arm_left.name = "CrankLeftArm"
+	crank_arm_left.mesh = arm_mesh
+	crank_arm_left.position = Vector3(-0.12, 0.0, 0.0)
+	crank_arm_left.material_override = metal_mat
+	crank_left.add_child(crank_arm_left)
+
+	var pedal_left := MeshInstance3D.new()
+	pedal_left.name = "PedalLeft"
+	pedal_left.mesh = pedal_mesh
+	pedal_left.position = Vector3(-0.24, 0.0, 0.0)
+	pedal_left.material_override = metal_mat
+	crank_left.add_child(pedal_left)
 
 func _add_tube(from_pos: Vector3, to_pos: Vector3, radius: float, mat: Material) -> void:
 	var segment := MeshInstance3D.new()
@@ -162,3 +191,23 @@ func _make_material(color: Color, roughness: float) -> StandardMaterial3D:
 	mat.albedo_color = color
 	mat.roughness = roughness
 	return mat
+
+func animate_drive(speed: float, delta: float) -> void:
+	var abs_speed: float = absf(speed)
+	if abs_speed < 0.05:
+		return
+	var wheel_delta: float = abs_speed * delta * 2.6
+	_wheel_spin += wheel_delta
+	for wheel_name in ["RearWheelTire", "RearWheelRim", "FrontWheelTire", "FrontWheelRim"]:
+		var wheel: Node = get_node_or_null(wheel_name)
+		if wheel and wheel is Node3D:
+			(wheel as Node3D).rotate_object_local(Vector3.RIGHT, wheel_delta)
+	_set_pedal_phase(_wheel_spin * 1.6)
+
+func _set_pedal_phase(phase: float) -> void:
+	var right: Node = get_node_or_null("CrankRightPivot")
+	var left: Node = get_node_or_null("CrankLeftPivot")
+	if right and right is Node3D:
+		(right as Node3D).rotation.z = phase
+	if left and left is Node3D:
+		(left as Node3D).rotation.z = phase + PI

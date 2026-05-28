@@ -1,4 +1,5 @@
 extends Node3D
+signal garage_zone_created(zone: Area3D)
 
 @export var bike_path: NodePath
 @export var chunk_size: float = 120.0
@@ -77,6 +78,8 @@ func _create_chunk(chunk_coord: Vector2i, key: String) -> void:
 	_add_ground(chunk_node)
 	_add_roads(chunk_node)
 	_add_city_blocks(chunk_node, chunk_coord)
+	if chunk_coord == Vector2i.ZERO:
+		_add_garage(chunk_node)
 
 func _add_ground(parent: Node3D) -> void:
 	var ground_body := StaticBody3D.new()
@@ -182,3 +185,39 @@ func _ensure_chunk(chunk_coord: Vector2i) -> void:
 	var key: String = "%d:%d" % [chunk_coord.x, chunk_coord.y]
 	if not _loaded_chunks.has(key):
 		_create_chunk(chunk_coord, key)
+
+func _add_garage(parent: Node3D) -> void:
+	var garage := StaticBody3D.new()
+	garage.name = "GarageBuilding"
+	garage.position = Vector3(-28.0, 0.0, -26.0)
+	parent.add_child(garage)
+
+	var garage_collision := CollisionShape3D.new()
+	var garage_shape := BoxShape3D.new()
+	garage_shape.size = Vector3(18.0, 8.0, 14.0)
+	garage_collision.shape = garage_shape
+	garage_collision.position = Vector3(0.0, 4.0, 0.0)
+	garage.add_child(garage_collision)
+
+	var garage_mesh := MeshInstance3D.new()
+	var garage_box := BoxMesh.new()
+	garage_box.size = Vector3(18.0, 8.0, 14.0)
+	garage_mesh.mesh = garage_box
+	garage_mesh.position = Vector3(0.0, 4.0, 0.0)
+	var garage_mat := StandardMaterial3D.new()
+	garage_mat.albedo_color = Color(0.2, 0.24, 0.3, 1.0)
+	garage_mat.roughness = 0.95
+	garage_mesh.material_override = garage_mat
+	garage.add_child(garage_mesh)
+
+	var zone := Area3D.new()
+	zone.name = "GarageEntranceZone"
+	zone.position = Vector3(0.0, 1.5, 7.6)
+	zone.set_meta("is_garage_zone", true)
+	garage.add_child(zone)
+	var zone_shape_node := CollisionShape3D.new()
+	var zone_shape := BoxShape3D.new()
+	zone_shape.size = Vector3(5.0, 3.0, 3.0)
+	zone_shape_node.shape = zone_shape
+	zone.add_child(zone_shape_node)
+	garage_zone_created.emit(zone)
