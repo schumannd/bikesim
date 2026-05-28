@@ -7,6 +7,9 @@ const RIDER_PELVIS_LOCAL := Vector3(0.0, 0.73, 0.04)
 const RIDE_SURFACE_Y := 0.0
 const GARAGE_FLOOR_Y := 0.0
 const FALL_RESET_Y := -8.0
+const BIKE_CAPSULE_HEIGHT := 1.2
+const BIKE_CAPSULE_RADIUS := 0.45
+const MAX_STEP_HEIGHT_RATIO := 0.5
 const GARAGE_BUILDING_POSITION := Vector3(-18.0, 0.0, -16.0)
 
 ## World position outside the garage door (rideable road, facing toward the open world).
@@ -29,8 +32,13 @@ static func wizard_exit_yaw(tower_world_pos: Vector3) -> float:
 static func ride_spawn_position(xz: Vector3 = Vector3.ZERO) -> Vector3:
 	return Vector3(xz.x, RIDE_SURFACE_Y, xz.z)
 
+static func max_step_height(wheel_radius: float) -> float:
+	return wheel_radius * MAX_STEP_HEIGHT_RATIO
+
 static func collision_shape_y(wheel_radius: float) -> float:
-	return wheel_radius + 0.16
+	# Capsule bottom sits at -max_step so curbs up to ~half a wheel still clear.
+	var half_extent := BIKE_CAPSULE_HEIGHT * 0.5 + BIKE_CAPSULE_RADIUS
+	return half_extent - max_step_height(wheel_radius)
 
 static func mount_rider_on_bike(bike: Node3D, bike_visual: Node3D, rider: Node3D) -> void:
 	var anchor := bike_visual.get_node_or_null("SeatAnchor")

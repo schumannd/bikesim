@@ -19,6 +19,7 @@ const ROAD_THICKNESS := 0.15
 const ROAD_WIDTH := 16.0
 const WorldPropBuilderScript := preload("res://scripts/WorldPropBuilder.gd")
 const WorldNPCScript := preload("res://scripts/WorldNPC.gd")
+const BikeRigScript := preload("res://scripts/BikeRig.gd")
 
 var _loaded_chunks: Dictionary = {}
 var _bike: Node3D
@@ -116,9 +117,10 @@ func _sync_global_terrain_position() -> void:
 	)
 
 func _add_ground(parent: Node3D) -> void:
-	# Collision only — one global terrain mesh avoids chunk-seam z-fighting.
+	# Flat ride collision at road height — terrain mesh stays lower for visuals only.
 	var ground_body := StaticBody3D.new()
-	ground_body.position = Vector3(0.0, TERRAIN_TOP_Y - 0.5, 0.0)
+	var ride_y: float = BikeRigScript.RIDE_SURFACE_Y
+	ground_body.position = Vector3(0.0, ride_y - 0.5, 0.0)
 	parent.add_child(ground_body)
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -166,13 +168,6 @@ func _add_road_segment(road_body: StaticBody3D, pos: Vector3, size: Vector3) -> 
 	mesh_inst.position = pos
 	mesh_inst.material_override = _road_material
 	road_body.add_child(mesh_inst)
-
-	var road_shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = size
-	road_shape.shape = box
-	road_shape.position = pos
-	road_body.add_child(road_shape)
 
 func _add_chunk_npcs(parent: Node3D, chunk_coord: Vector2i, center_chunk: Vector2i, rng: RandomNumberGenerator) -> void:
 	var dist: int = maxi(absi(chunk_coord.x - center_chunk.x), absi(chunk_coord.y - center_chunk.y))
@@ -300,7 +295,15 @@ func _add_garage(parent: Node3D) -> void:
 	var door_h := 4.2
 
 	_add_garage_box(garage, "ApproachPad", Vector3(0.0, 0.03, 7.2), Vector3(door_w + 2.4, 0.06, 5.0), pad_mat, false)
-	_add_garage_box(garage, "Floor", Vector3(0.0, 0.08, 0.0), Vector3(width, 0.16, depth), pad_mat, true)
+	var floor_thickness := 0.12
+	_add_garage_box(
+		garage,
+		"Floor",
+		Vector3(0.0, BikeRigScript.RIDE_SURFACE_Y - floor_thickness * 0.5, 0.0),
+		Vector3(width, floor_thickness, depth),
+		pad_mat,
+		true
+	)
 	_add_garage_box(garage, "BackWall", Vector3(0.0, height * 0.5, -depth * 0.5 + wall_t * 0.5), Vector3(width, height, wall_t), wall_mat, true)
 	_add_garage_box(garage, "LeftWall", Vector3(-width * 0.5 + wall_t * 0.5, height * 0.5, 0.0), Vector3(wall_t, height, depth), wall_mat, true)
 	_add_garage_box(garage, "RightWall", Vector3(width * 0.5 - wall_t * 0.5, height * 0.5, 0.0), Vector3(wall_t, height, depth), wall_mat, true)

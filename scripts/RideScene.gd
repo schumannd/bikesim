@@ -71,6 +71,8 @@ func _apply_visuals() -> void:
 	var wheel_radius: float = bike_visual.call("get_wheel_radius")
 	bike.position = BikeRigScript.ride_spawn_position(bike.position)
 	bike_collision.position.y = BikeRigScript.collision_shape_y(wheel_radius)
+	if bike.has_method("set_wheel_radius"):
+		bike.call("set_wheel_radius", wheel_radius)
 	spawn_position = BikeRigScript.ride_spawn_position(spawn_position)
 	bike.call("set_reset_position", spawn_position)
 	_apply_exit_spawns_if_pending()
