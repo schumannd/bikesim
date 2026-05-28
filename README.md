@@ -12,9 +12,18 @@
 - `G`: open garage
 - `C`: open character customization
 
+## Main Menu
+
+On launch you get a main menu with:
+
+- **New Game** — starts a fresh save in the first empty slot (or slot 1 if all slots are full)
+- **Continue (3 slots)** — load an existing save; hover a slot to preview bike + rider
+- **Settings** — frame rate limit and quality preset
+- **Quit**
+
 ## Project Structure
 
-- `scenes/`: main scenes (`Main`, `RideScene`, `GarageScene`, `CharacterCustomizationScene`)
+- `scenes/`: main scenes (`Main`, `MainMenuScene`, `RideScene`, `GarageScene`, `CharacterCustomizationScene`, `SettingsScene`)
 - `scripts/`: gameplay and UI scripts
 - `systems/`: autoload singletons (`GameState`, `SaveSystem`, `Settings`)
 - `resources/`: saved config resources (`BikeConfig`, `CharacterConfig`)
@@ -42,9 +51,10 @@
   - Default timeout is `30s` (override with `UI_SMOKE_TIMEOUT_SECONDS=45`).
 - What it validates:
   - Game launches through `Main.tscn`
-  - Initial ride screen is loaded
+  - Main menu loads; new game opens the ride scene
   - Garage menu opens and returns to ride scene
   - Character customization menu opens and returns to ride scene
+  - Settings opens and returns to the main menu
 - CI:
   - GitHub Actions workflow at `.github/workflows/ui-smoke-test.yml` runs the same smoke test on push and pull request.
 
