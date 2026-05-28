@@ -13,6 +13,11 @@ var garage_exit_spawn: Vector3 = Vector3.ZERO
 var pending_wizard_exit: bool = false
 var wizard_exit_spawn: Vector3 = Vector3.ZERO
 var wizard_tower_world_position: Vector3 = Vector3.ZERO
+var pending_house_exit: bool = false
+var house_exit_spawn: Vector3 = Vector3.ZERO
+var house_exit_yaw: float = 0.0
+var house_entrance_world: Vector3 = Vector3.ZERO
+var current_house_seed: int = 0
 var character_edit_context: String = "ride"
 var is_new_game_setup: bool = false
 var money: float = 0.2
@@ -45,6 +50,28 @@ func consume_wizard_exit_spawn() -> Vector3:
 	var spawn := wizard_exit_spawn
 	wizard_exit_spawn = Vector3.ZERO
 	return spawn
+
+func begin_house_visit(entrance_world: Vector3, exit_yaw: float, house_seed: int) -> void:
+	house_entrance_world = entrance_world
+	house_exit_yaw = exit_yaw
+	current_house_seed = house_seed
+
+func queue_house_exit() -> void:
+	pending_house_exit = true
+	house_exit_spawn = BikeRigScript.house_exit_spawn(house_entrance_world)
+
+func consume_house_exit_spawn() -> Vector3:
+	if not pending_house_exit:
+		return Vector3.INF
+	pending_house_exit = false
+	var spawn := house_exit_spawn
+	house_exit_spawn = Vector3.ZERO
+	return spawn
+
+func consume_house_exit_yaw() -> float:
+	var yaw := house_exit_yaw
+	house_exit_yaw = 0.0
+	return yaw
 
 func begin_character_edit(context: String) -> void:
 	character_edit_context = context

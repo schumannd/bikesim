@@ -25,6 +25,11 @@ func show_garage() -> void:
 	var scene := preload("res://scenes/GarageScene.tscn").instantiate()
 	current_screen.add_child(scene)
 
+func show_house_interior() -> void:
+	_clear_current_screen()
+	var scene := preload("res://scenes/HouseInteriorScene.tscn").instantiate()
+	current_screen.add_child(scene)
+
 func show_character_customization(context: String = "ride") -> void:
 	GameState.begin_character_edit(context)
 	_clear_current_screen()

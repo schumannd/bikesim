@@ -1,6 +1,7 @@
 extends Node3D
 signal garage_zone_created(zone: Area3D)
 signal wizard_tower_zone_created(zone: Area3D)
+signal house_entrance_created(zone: Area3D)
 
 @export var bike_path: NodePath
 @export var chunk_size: float = 120.0
@@ -228,6 +229,7 @@ func _add_city_blocks(parent: Node3D, chunk_coord: Vector2i, rng: RandomNumberGe
 		Vector3(0.0, 0.0, 50.0)
 	]
 
+	var enterable_added := false
 	for slot: Vector3 in slots:
 		if rng.randf() < 0.25:
 			continue
@@ -257,6 +259,45 @@ func _add_city_blocks(parent: Node3D, chunk_coord: Vector2i, rng: RandomNumberGe
 		building.add_child(building_mesh)
 		WorldPropBuilderScript.add_building_windows(building, mesh.size, rng)
 		parent.add_child(building)
+		if not enterable_added:
+			_add_building_entrance(parent, building, mesh.size, chunk_coord)
+			enterable_added = true
+
+func _add_building_entrance(parent: Node3D, building: StaticBody3D, size: Vector3, chunk_coord: Vector2i) -> void:
+	var zone := Area3D.new()
+	zone.name = "HouseEntrance"
+	var toward_center := Vector3(-building.position.x, 0.0, -building.position.z)
+	if toward_center.length_squared() < 0.01:
+		toward_center = Vector3(0.0, 0.0, 1.0)
+	toward_center = toward_center.normalized()
+	var door_offset := toward_center * (size.z * 0.5 + 2.4)
+	zone.position = building.position + door_offset + Vector3(0.0, 1.2, 0.0)
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(3.4, 2.8, 3.4)
+	shape.shape = box
+	zone.add_child(shape)
+	zone.set_meta("is_house_entrance", true)
+	var seed := _chunk_seed(chunk_coord) ^ int(building.position.x * 19.0 + building.position.z * 37.0)
+	zone.set_meta("house_seed", seed)
+	zone.monitoring = true
+	parent.add_child(zone)
+	_add_entrance_marker(parent, zone.position)
+	house_entrance_created.emit(zone)
+
+func _add_entrance_marker(chunk_parent: Node3D, door_pos: Vector3) -> void:
+	var marker := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(1.6, 2.4, 0.15)
+	marker.mesh = mesh
+	marker.position = door_pos + Vector3(0.0, 1.3, 0.0)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.95, 0.75, 0.35, 1.0)
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.85, 0.4, 1.0)
+	mat.emission_energy_multiplier = 0.6
+	marker.material_override = mat
+	chunk_parent.add_child(marker)
 
 func _overlaps_garage_lot(building_pos: Vector3, building_size: Vector3) -> bool:
 	var half := Vector3(building_size.x * 0.5, 0.0, building_size.z * 0.5)

@@ -24,9 +24,11 @@ var _wizard_tower_world_pos: Vector3 = Vector3.ZERO
 var _has_wizard_tower_poi: bool = false
 var _garage_auto_enter_block_until: float = 0.0
 var _wizard_auto_enter_block_until: float = 0.0
+var _house_auto_enter_block_until: float = 0.0
+var _house_in_range: Area3D = null
 
 func _ready() -> void:
-	hint_label.text = "Golden quest marker: press E | Garage: G | Character: C | Reset: R"
+	hint_label.text = "E: interact | Golden door: apartment | G: garage | C: character | R: reset"
 	_update_mission_text()
 	_update_money_label()
 	_update_quest_labels()
@@ -38,6 +40,8 @@ func _ready() -> void:
 		world_root.garage_zone_created.connect(_on_garage_zone_created)
 	if world_root.has_signal("wizard_tower_zone_created"):
 		world_root.wizard_tower_zone_created.connect(_on_wizard_tower_zone_created)
+	if world_root.has_signal("house_entrance_created"):
+		world_root.house_entrance_created.connect(_on_house_entrance_created)
 	_connect_existing_zones()
 
 func _process(_delta: float) -> void:
@@ -51,7 +55,9 @@ func _process(_delta: float) -> void:
 		_complete_mission_step(1)
 		get_tree().root.get_node("Main").show_character_customization("ride")
 	if Input.is_action_just_pressed("interact"):
-		if quest_controller.has_method("try_interact"):
+		if _try_enter_house():
+			pass
+		elif quest_controller.has_method("try_interact"):
 			quest_controller.call("try_interact")
 	_update_quest_labels()
 
@@ -80,9 +86,15 @@ func _apply_visuals() -> void:
 func _apply_exit_spawns_if_pending() -> void:
 	var garage_exit: Vector3 = GameState.consume_garage_exit_spawn()
 	var wizard_exit: Vector3 = GameState.consume_wizard_exit_spawn()
-	if garage_exit == Vector3.INF and wizard_exit == Vector3.INF:
+	var house_exit: Vector3 = GameState.consume_house_exit_spawn()
+	var house_yaw: float = GameState.consume_house_exit_yaw()
+	if garage_exit == Vector3.INF and wizard_exit == Vector3.INF and house_exit == Vector3.INF:
 		return
-	if garage_exit != Vector3.INF:
+	if house_exit != Vector3.INF:
+		bike.global_position = house_exit
+		bike.rotation.y = house_yaw
+		_house_auto_enter_block_until = Time.get_ticks_msec() / 1000.0 + 2.5
+	elif garage_exit != Vector3.INF:
 		bike.global_position = BikeRigScript.ride_spawn_position(garage_exit)
 		bike.rotation.y = BikeRigScript.garage_exit_yaw()
 		_garage_auto_enter_block_until = Time.get_ticks_msec() / 1000.0 + 2.5
@@ -182,6 +194,8 @@ func _scan_zones_recursive(node: Node) -> void:
 			_on_garage_zone_created(node as Area3D)
 		if node.has_meta("is_wizard_tower_zone"):
 			_on_wizard_tower_zone_created(node as Area3D)
+		if node.has_meta("is_house_entrance"):
+			_on_house_entrance_created(node as Area3D)
 	for child in node.get_children():
 		_scan_zones_recursive(child)
 
@@ -218,3 +232,32 @@ func _enter_wizard_tower() -> void:
 	_complete_mission_step(1)
 	GameState.wizard_tower_world_position = _wizard_tower_world_pos
 	get_tree().root.get_node("Main").show_character_customization("wizard_tower")
+
+func _on_house_entrance_created(zone: Area3D) -> void:
+	if not zone.body_entered.is_connected(_on_house_entrance_body_entered):
+		zone.body_entered.connect(_on_house_entrance_body_entered.bind(zone))
+	if not zone.body_exited.is_connected(_on_house_entrance_body_exited):
+		zone.body_exited.connect(_on_house_entrance_body_exited.bind(zone))
+
+func _on_house_entrance_body_entered(body: Node3D, zone: Area3D) -> void:
+	if body == bike:
+		_house_in_range = zone
+		_enter_house(zone)
+
+func _on_house_entrance_body_exited(body: Node3D, _zone: Area3D) -> void:
+	if body == bike:
+		_house_in_range = null
+
+func _try_enter_house() -> bool:
+	if _house_in_range == null or not is_instance_valid(_house_in_range):
+		return false
+	_enter_house(_house_in_range)
+	return true
+
+func _enter_house(zone: Area3D) -> void:
+	if Time.get_ticks_msec() / 1000.0 < _house_auto_enter_block_until:
+		return
+	var seed := int(zone.get_meta("house_seed", 0))
+	GameState.begin_house_visit(zone.global_position, bike.rotation.y, seed)
+	_house_in_range = null
+	get_tree().root.get_node("Main").show_house_interior()

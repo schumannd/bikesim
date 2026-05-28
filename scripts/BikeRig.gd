@@ -29,6 +29,9 @@ static func wizard_exit_yaw(tower_world_pos: Vector3) -> float:
 	var away := exit_pos - tower_world_pos
 	return atan2(away.x, away.z)
 
+static func house_exit_spawn(entrance_world: Vector3) -> Vector3:
+	return ride_spawn_position(entrance_world)
+
 static func ride_spawn_position(xz: Vector3 = Vector3.ZERO) -> Vector3:
 	return Vector3(xz.x, RIDE_SURFACE_Y, xz.z)
 

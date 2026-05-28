@@ -10,7 +10,7 @@
 | `A` / `D` | Steer |
 | `Space` | Brake |
 | `R` | Quick reset to latest spawn |
-| `E` | Interact (e.g. start quest at golden marker) |
+| `E` | Interact (quest, apartment door) |
 | `G` | Open garage |
 | `C` | Open character customization |
 
@@ -46,8 +46,22 @@ The open city has procedural sidewalks, road markings, street furniture (trees, 
 
 Each save places a **secret purple wizard tower** in one distant chunk (purple marker on the minimap). Enter the tower to open the appearance editor again.
 
+## Apartments
+
+Many chunks have one building with a **golden door** (ride into the doorway or press **E** at the door).
+
+Inside you get a generated **living room** with a few NPCs:
+
+| Key | Action |
+|-----|--------|
+| `W` / `S` or `↑` / `↓` | Select who to talk to |
+| `E` | Next dialogue line |
+| `P` | Focus on the phone (stone-sliding minigame) |
+| `Esc` | Leave apartment (or exit minigame back to room) |
+
+**Phone minigame:** stones sit on a virtual phone screen. Move the **credit card** with your **mouse** and push every stone past the **left edge** (friction + gravity apply). Press **Esc** to return to the room.
+
 ## Planned
 
-- NPC interaction / dialogue
-- House interior enter/exit
-- In-house phone minigame
+- Deeper NPC dialogue trees
+- House interior enter/exit polish (map markers)
