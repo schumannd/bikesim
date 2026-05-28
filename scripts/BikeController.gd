@@ -19,6 +19,7 @@ var _wheel_radius: float = 0.44
 var _wall_hit_cooldown: float = 0.0
 
 func _ready() -> void:
+	add_to_group("player_bike")
 	floor_snap_length = 0.35
 	floor_max_angle = deg_to_rad(58.0)
 

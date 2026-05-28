@@ -2,19 +2,19 @@ extends Control
 
 const BikeRigScript := preload("res://scripts/BikeRig.gd")
 
-@onready var bike: CharacterBody3D = $SubViewportContainer/SubViewport/World/Bike
-@onready var bike_collision: CollisionShape3D = $SubViewportContainer/SubViewport/World/Bike/CollisionShape3D
+@onready var bike: CharacterBody3D = $SubViewportContainer/SubViewport/Bike
+@onready var bike_collision: CollisionShape3D = $SubViewportContainer/SubViewport/Bike/CollisionShape3D
 @onready var speed_label: Label = $HUD/MarginContainer/VBoxContainer/SpeedLabel
 @onready var money_label: Label = $HUD/MoneyLabel
 @onready var hint_label: Label = $HUD/MarginContainer/VBoxContainer/HintLabel
 @onready var mission_label: Label = $HUD/MarginContainer/VBoxContainer/MissionLabel
 @onready var checkpoint_label: Label = $HUD/MarginContainer/VBoxContainer/CheckpointLabel
 @onready var minimap: Panel = $HUD/MinimapPanel
-@onready var rider_visual: Node3D = $SubViewportContainer/SubViewport/World/Bike/RiderVisual
-@onready var bike_visual: Node3D = $SubViewportContainer/SubViewport/World/Bike/BikeVisual
-@onready var engine_audio: AudioStreamPlayer3D = $SubViewportContainer/SubViewport/World/Bike/EngineAudio
+@onready var rider_visual: Node3D = $SubViewportContainer/SubViewport/Bike/RiderVisual
+@onready var bike_visual: Node3D = $SubViewportContainer/SubViewport/Bike/BikeVisual
+@onready var engine_audio: AudioStreamPlayer3D = $SubViewportContainer/SubViewport/Bike/EngineAudio
 @onready var world_root: Node3D = $SubViewportContainer/SubViewport/World
-@onready var quest_controller: Node3D = $SubViewportContainer/SubViewport/World/QuestController
+@onready var quest_controller: Node3D = $SubViewportContainer/SubViewport/QuestController
 
 var spawn_position: Vector3 = BikeRigScript.ride_spawn_position()
 var mission_step: int = 0

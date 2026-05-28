@@ -27,7 +27,7 @@ var _road_material: StandardMaterial3D
 var _highway_material: StandardMaterial3D
 
 func _ready() -> void:
-	_bike = get_node_or_null(bike_path)
+	_resolve_bike()
 	_clear_legacy_static_layout()
 	_road_material = StandardMaterial3D.new()
 	_road_material.albedo_color = Color(0.1, 0.1, 0.12, 1.0)
@@ -40,12 +40,20 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	_refresh_chunks(false)
 
+func _resolve_bike() -> Node3D:
+	if _bike != null and is_instance_valid(_bike):
+		return _bike
+	if bike_path != NodePath():
+		_bike = get_node_or_null(bike_path) as Node3D
+	if _bike == null:
+		_bike = get_tree().get_first_node_in_group("player_bike") as Node3D
+	return _bike
+
 func _refresh_chunks(force: bool) -> void:
-	if _bike == null:
-		_bike = get_node_or_null(bike_path)
-	if _bike == null:
+	var bike := _resolve_bike()
+	if bike == null:
 		return
-	var center_chunk: Vector2i = _world_to_chunk(_bike.global_position)
+	var center_chunk: Vector2i = _world_to_chunk(bike.global_position)
 	var target_keys: Dictionary = {}
 	for x in range(center_chunk.x - load_radius, center_chunk.x + load_radius + 1):
 		for z in range(center_chunk.y - load_radius, center_chunk.y + load_radius + 1):

@@ -143,8 +143,11 @@ func _tick_cycle(delta: float) -> void:
 	var t := _path_progress
 	var pos := _path_from.lerp(_path_to, t)
 	var move_dir := (_path_to - _path_from).normalized() * _path_dir
-	_bike_root.position = pos
-	_bike_root.rotation.y = atan2(move_dir.x, move_dir.z)
+	position = pos
+	rotation.y = atan2(move_dir.x, move_dir.z)
+	if _bike_root != null:
+		_bike_root.position = Vector3.ZERO
+		_bike_root.rotation = Vector3.ZERO
 
 	_phase += delta * _speed * 1.8
 	if _bike_visual:

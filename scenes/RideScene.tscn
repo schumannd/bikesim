@@ -56,52 +56,52 @@ handle_input_locally = false
 
 [node name="World" type="Node3D" parent="SubViewportContainer/SubViewport"]
 script = ExtResource("4_city")
-bike_path = NodePath("Bike")
+bike_path = NodePath("../Bike")
 
 [node name="Sun" type="DirectionalLight3D" parent="SubViewportContainer/SubViewport/World"]
 rotation = Vector3(-0.785398, 0, 0)
 light_energy = 1.2
 
-[node name="Bike" type="CharacterBody3D" parent="SubViewportContainer/SubViewport/World"]
+[node name="Bike" type="CharacterBody3D" parent="SubViewportContainer/SubViewport"]
 script = ExtResource("2_bike")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SubViewportContainer/SubViewport/World/Bike"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SubViewportContainer/SubViewport/Bike"]
 position = Vector3(0, 0.6, 0)
 shape = SubResource("4_bikeshape")
 
-[node name="BikeVisual" type="Node3D" parent="SubViewportContainer/SubViewport/World/Bike"]
+[node name="BikeVisual" type="Node3D" parent="SubViewportContainer/SubViewport/Bike"]
 script = ExtResource("5_bikevisual")
 
-[node name="FrameTop" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Bike/BikeVisual"]
+[node name="FrameTop" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/Bike/BikeVisual"]
 position = Vector3(0, 0.75, -0.08)
 mesh = SubResource("3_bikemesh")
 
-[node name="FrameDown" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Bike/BikeVisual"]
+[node name="FrameDown" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/Bike/BikeVisual"]
 position = Vector3(0, 0.55, 0.13)
 rotation = Vector3(0.22, 0, 0)
 mesh = SubResource("3_bikemesh")
 
-[node name="Fork" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Bike/BikeVisual"]
+[node name="Fork" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/Bike/BikeVisual"]
 position = Vector3(0, 0.5, 0.78)
 rotation = Vector3(-0.35, 0, 0)
 mesh = SubResource("14_barmesh")
 
-[node name="SeatPost" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Bike/BikeVisual"]
+[node name="SeatPost" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/Bike/BikeVisual"]
 position = Vector3(0, 0.77, -0.46)
 rotation = Vector3(0.2, 0, 0)
 mesh = SubResource("14_barmesh")
 
-[node name="HandleBar" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Bike/BikeVisual"]
+[node name="HandleBar" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/Bike/BikeVisual"]
 position = Vector3(0, 0.85, 0.78)
 rotation = Vector3(1.5708, 0, 1.5708)
 mesh = SubResource("14_barmesh")
 
-[node name="RearWheel" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Bike/BikeVisual"]
+[node name="RearWheel" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/Bike/BikeVisual"]
 position = Vector3(0, 0.34, -0.68)
 rotation = Vector3(1.5708, 0, 0)
 mesh = SubResource("13_wheelmesh")
 
-[node name="FrontWheel" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Bike/BikeVisual"]
+[node name="FrontWheel" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/Bike/BikeVisual"]
 position = Vector3(0, 0.34, 0.78)
 rotation = Vector3(1.5708, 0, 0)
 mesh = SubResource("13_wheelmesh")
@@ -117,19 +117,20 @@ unit_size = 8.0
 max_db = -3.0
 attenuation_model = 0
 
-[node name="Camera3D" type="Camera3D" parent="SubViewportContainer/SubViewport/World"]
+[node name="Camera3D" type="Camera3D" parent="SubViewportContainer/SubViewport"]
 position = Vector3(0, 2.2, 4.5)
 fov = 68.0
 current = true
 script = ExtResource("3_cam")
-target_path = NodePath("../Bike")
+target_path = NodePath("Bike")
 follow_distance = 3.8
 follow_height = 2.0
 look_at_height = 1.15
 
-[node name="QuestController" type="Node3D" parent="SubViewportContainer/SubViewport/World"]
+[node name="QuestController" type="Node3D" parent="SubViewportContainer/SubViewport"]
 script = ExtResource("9_quest")
 bike_path = NodePath("../Bike")
+world_path = NodePath("../World")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 

@@ -10,16 +10,24 @@ const QUEST_REWARD := 2.0
 signal quest_state_changed
 
 @export var bike_path: NodePath
+@export var world_path: NodePath
 
 var _bike: Node3D
+var _world: Node3D
 var _quest_giver: Area3D
 var _active_checkpoint: Area3D
 var _route: Array[Vector3] = []
 
 func _ready() -> void:
-	_bike = get_node_or_null(bike_path)
+	_bike = get_node_or_null(bike_path) as Node3D
+	_world = get_node_or_null(world_path) as Node3D
 	_spawn_quest_giver()
 	_apply_saved_quest_state()
+
+func _quest_parent() -> Node3D:
+	if _world != null:
+		return _world
+	return self
 
 func _process(_delta: float) -> void:
 	if _active_checkpoint != null and is_instance_valid(_active_checkpoint):
@@ -52,7 +60,7 @@ func _spawn_quest_giver() -> void:
 	_quest_giver.name = "QuestGiver"
 	_quest_giver.position = QUEST_GIVER_POSITION
 	_quest_giver.set_script(QuestGiverMarkerScript)
-	add_child(_quest_giver)
+	_quest_parent().add_child(_quest_giver)
 
 	var shape := CollisionShape3D.new()
 	var sphere := SphereShape3D.new()
@@ -109,7 +117,7 @@ func _spawn_checkpoint(index: int) -> void:
 	checkpoint.set_script(CheckpointMarkerScript)
 	var style := "checkered" if is_finish else "blue"
 	checkpoint.call("configure", style, not is_finish)
-	add_child(checkpoint)
+	_quest_parent().add_child(checkpoint)
 
 	var shape := CollisionShape3D.new()
 	var sphere := SphereShape3D.new()
