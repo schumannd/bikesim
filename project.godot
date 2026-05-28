@@ -16,6 +16,7 @@ config/features=PackedStringArray("4.2")
 GameState="*res://systems/GameState.gd"
 SaveSystem="*res://systems/SaveSystem.gd"
 Settings="*res://systems/Settings.gd"
+BackgroundMusic="*res://systems/BackgroundMusic.gd"
 
 [display]
 window/size/viewport_width=1600

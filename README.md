@@ -45,7 +45,7 @@ On launch you get a main menu with:
 
 - `scenes/`: main scenes (`Main`, `MainMenuScene`, `RideScene`, `GarageScene`, `CharacterCustomizationScene`, `SettingsScene`)
 - `scripts/`: gameplay and UI scripts
-- `systems/`: autoload singletons (`GameState`, `SaveSystem`, `Settings`)
+- `systems/`: autoload singletons (`GameState`, `SaveSystem`, `Settings`, `BackgroundMusic`)
 - `resources/`: saved config resources (`BikeConfig`, `CharacterConfig`)
 - `export_presets.cfg`: desktop export setup (Windows/Linux/macOS)
 
