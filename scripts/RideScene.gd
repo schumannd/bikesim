@@ -12,7 +12,7 @@ extends Control
 @onready var engine_audio: AudioStreamPlayer3D = $SubViewportContainer/SubViewport/World/Bike/EngineAudio
 @onready var world_root: Node3D = $SubViewportContainer/SubViewport/World
 
-var spawn_position: Vector3 = Vector3(0, 1.2, 0)
+var spawn_position: Vector3 = Vector3(0, 0.72, 0)
 var mission_step: int = 0
 var _garage_zone_active: bool = false
 var _pedal_phase: float = 0.0

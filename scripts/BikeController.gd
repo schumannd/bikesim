@@ -7,7 +7,7 @@ extends CharacterBody3D
 @export var gravity: float = 18.0
 
 var speed: float = 0.0
-var reset_position: Vector3 = Vector3(0, 1.2, 0)
+var reset_position: Vector3 = Vector3(0, 0.72, 0)
 
 func _physics_process(delta: float) -> void:
 	var throttle := Input.get_action_strength("move_forward") - Input.get_action_strength("move_backward")
