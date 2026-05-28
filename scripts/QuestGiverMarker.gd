@@ -3,8 +3,8 @@ extends Area3D
 const RiderVisualBuilderScript := preload("res://scripts/RiderVisualBuilder.gd")
 const CharacterConfigResource := preload("res://resources/CharacterConfig.gd")
 
-const GOLD_MIST := Color(1.0, 0.82, 0.2, 0.42)
-const GOLD_CORE := Color(1.0, 0.92, 0.45, 0.6)
+const GOLD_MIST := Color(1.0, 0.82, 0.2, 0.14)
+const GOLD_CORE := Color(1.0, 0.92, 0.45, 0.2)
 
 signal interact_requested
 
@@ -59,7 +59,7 @@ func _build_golden_mist() -> void:
 	var light := OmniLight3D.new()
 	light.position = Vector3(0.0, 2.0, 0.0)
 	light.light_color = Color(1.0, 0.85, 0.25, 1.0)
-	light.light_energy = 2.8
+	light.light_energy = 1.4
 	light.omni_range = 12.0
 	_visual_root.add_child(light)
 
@@ -72,7 +72,7 @@ func _add_cylinder(pos: Vector3, bottom_r: float, top_r: float, height: float) -
 	mesh.radial_segments = 20
 	mesh_inst.mesh = mesh
 	mesh_inst.position = pos
-	mesh_inst.material_override = _mist_mat(GOLD_MIST, 0.35, 1.8)
+	mesh_inst.material_override = _mist_mat(GOLD_MIST, 0.09, 0.7)
 	_visual_root.add_child(mesh_inst)
 
 func _add_disc(pos: Vector3, radius: float, height: float) -> void:
@@ -84,7 +84,7 @@ func _add_disc(pos: Vector3, radius: float, height: float) -> void:
 	mesh.radial_segments = 28
 	mesh_inst.mesh = mesh
 	mesh_inst.position = pos
-	mesh_inst.material_override = _mist_mat(GOLD_CORE, 0.55, 2.2)
+	mesh_inst.material_override = _mist_mat(GOLD_CORE, 0.12, 0.9)
 	_visual_root.add_child(mesh_inst)
 
 func _mist_mat(color: Color, alpha: float, emission: float) -> StandardMaterial3D:
@@ -94,7 +94,10 @@ func _mist_mat(color: Color, alpha: float, emission: float) -> StandardMaterial3
 	mat.emission = Color(color.r, color.g, color.b, 1.0)
 	mat.emission_energy_multiplier = emission
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	return mat
 
 func _on_body_entered(body: Node3D) -> void:

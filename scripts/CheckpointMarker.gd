@@ -2,8 +2,8 @@ extends Area3D
 
 signal reached
 
-const MIST_BLUE := Color(0.25, 0.72, 1.0, 0.38)
-const MIST_CORE := Color(0.45, 0.88, 1.0, 0.55)
+const MIST_BLUE := Color(0.25, 0.72, 1.0, 0.12)
+const MIST_CORE := Color(0.45, 0.88, 1.0, 0.18)
 
 const QuestDirectionArrowScript := preload("res://scripts/QuestDirectionArrow.gd")
 
@@ -70,7 +70,7 @@ func _build_column_visuals() -> void:
 			_build_blue_column()
 
 func _build_blue_column() -> void:
-	_add_disc(Vector3(0.0, 0.05, 0.0), 2.4, 0.12, MIST_BLUE.lightened(0.2), MIST_BLUE, 0.5, 2.0)
+	_add_disc(Vector3(0.0, 0.05, 0.0), 2.4, 0.12, MIST_BLUE.lightened(0.2), MIST_BLUE, 0.1, 0.7)
 	var heights := [1.6, 3.2, 4.8, 6.2]
 	var radii_top := [1.0, 0.85, 0.7, 0.55]
 	var radii_bottom := [1.25, 1.05, 0.9, 0.72]
@@ -81,13 +81,13 @@ func _build_blue_column() -> void:
 			radii_top[i],
 			heights[i],
 			MIST_BLUE,
-			0.28 + float(i) * 0.04,
-			1.6
+			0.08 + float(i) * 0.015,
+			0.65
 		)
 		_mist_layers.append(layer)
-	_add_cylinder(Vector3(0.0, 3.2, 0.0), 0.35, 0.25, 6.4, MIST_CORE, 0.65, 2.8)
-	_add_light(Color(0.35, 0.8, 1.0), Vector3(0.0, 1.2, 0.0), 2.4, 14.0)
-	_add_light(Color(0.5, 0.9, 1.0), Vector3(0.0, 6.0, 0.0), 1.2, 8.0)
+	_add_cylinder(Vector3(0.0, 3.2, 0.0), 0.35, 0.25, 6.4, MIST_CORE, 0.12, 0.9)
+	_add_light(Color(0.35, 0.8, 1.0), Vector3(0.0, 1.2, 0.0), 1.2, 14.0)
+	_add_light(Color(0.5, 0.9, 1.0), Vector3(0.0, 6.0, 0.0), 0.6, 8.0)
 
 func _build_checkered_column() -> void:
 	var heights := [1.4, 1.4, 1.4, 1.4, 1.4, 1.4]
@@ -159,9 +159,10 @@ func _mist_material(color: Color, alpha: float, emission: float) -> StandardMate
 	mat.emission = Color(color.r, color.g, color.b, 1.0)
 	mat.emission_energy_multiplier = emission
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	mat.roughness = 0.92
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	return mat
 
 func mark_reached() -> void:
