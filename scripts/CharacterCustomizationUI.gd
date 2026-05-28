@@ -38,19 +38,28 @@ func _ready() -> void:
 	skin_picker.color_changed.connect(func(_c: Color) -> void: _refresh_preview())
 	outfit_picker.color_changed.connect(func(_c: Color) -> void: _refresh_preview())
 	resized.connect(_on_resized)
+	_disable_control_focus()
+	focus_mode = Control.FOCUS_ALL
+	grab_focus()
 	set_process(true)
-	set_process_unhandled_input(true)
+	set_process_input(true)
 	_apply_nav_selection()
+
+func _disable_control_focus() -> void:
+	for control: Control in [outfit_option, hair_option, skin_picker, outfit_picker, confirm_button, cancel_button]:
+		control.focus_mode = Control.FOCUS_NONE
 
 func _process(delta: float) -> void:
 	_preview_spin += delta * 0.35
 	if rider_pivot:
 		rider_pivot.rotation.y = _preview_spin
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
-	match event.keycode:
+	var key_event := event as InputEventKey
+	var handled := true
+	match key_event.keycode:
 		KEY_W, KEY_UP:
 			_nav_index = posmod(_nav_index - 1, _nav_fields.size())
 			SoundEffects.play_menu_move()
@@ -63,14 +72,21 @@ func _unhandled_input(event: InputEvent) -> void:
 			_step_field(-1)
 		KEY_D, KEY_RIGHT:
 			_step_field(1)
-		KEY_ENTER, KEY_KP_ENTER:
-			SoundEffects.play_menu_confirm()
-			if _nav_fields[_nav_index] == "confirm":
-				_on_confirm_pressed()
-			elif _nav_fields[_nav_index] == "cancel":
-				_on_cancel_pressed()
+		KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
+			_activate_selection()
 		KEY_ESCAPE:
 			_on_cancel_pressed()
+		_:
+			handled = false
+	if handled:
+		get_viewport().set_input_as_handled()
+
+func _activate_selection() -> void:
+	SoundEffects.play_menu_confirm()
+	if _nav_fields[_nav_index] == "cancel":
+		_on_cancel_pressed()
+	else:
+		_on_confirm_pressed()
 
 func _step_field(direction: int) -> void:
 	var field: String = _nav_fields[_nav_index]
@@ -166,17 +182,17 @@ func _apply_context_ui() -> void:
 	match GameState.character_edit_context:
 		"new_game":
 			title_label.text = "CREATE YOUR RIDER"
-			subtitle_label.text = "W/S navigate — A/D change — Enter confirm"
+			subtitle_label.text = "W/S navigate — A/D change — Enter start"
 			confirm_button.text = "START RIDING"
 			cancel_button.text = "Back to menu"
 		"wizard_tower":
 			title_label.text = "WIZARD'S MIRROR"
-			subtitle_label.text = "W/S navigate — A/D change — Enter confirm"
+			subtitle_label.text = "W/S navigate — A/D change — Enter start"
 			confirm_button.text = "ACCEPT NEW FORM"
 			cancel_button.text = "Leave unchanged"
 		_:
 			title_label.text = "CHARACTER"
-			subtitle_label.text = "W/S navigate — A/D change — Enter confirm"
+			subtitle_label.text = "W/S navigate — A/D change — Enter start"
 			confirm_button.text = "SAVE & RIDE"
 			cancel_button.text = "Cancel"
 
