@@ -8,7 +8,6 @@ extends CharacterBody3D
 
 var speed: float = 0.0
 var reset_position: Vector3 = Vector3(0, 1.2, 0)
-var hard_floor_recover_y: float = -12.0
 
 func _physics_process(delta: float) -> void:
 	var throttle := Input.get_action_strength("move_forward") - Input.get_action_strength("move_backward")
@@ -26,11 +25,6 @@ func _physics_process(delta: float) -> void:
 	velocity.z = forward.z * speed
 	velocity.y -= gravity * delta
 	move_and_slide()
-	if global_position.y < hard_floor_recover_y:
-		# Final fail-safe in case physics ever slips through streamed terrain.
-		global_position = reset_position + Vector3.UP * 0.6
-		velocity = Vector3.ZERO
-		speed = 0.0
 
 	if Input.is_action_just_pressed("quick_reset"):
 		global_position = reset_position
