@@ -5,7 +5,7 @@ extends Node3D
 @export var load_radius: int = 4
 @export var unload_radius: int = 6
 @export var look_ahead_seconds: float = 3.0
-@export var safety_ground_size: float = 280.0
+@export var safety_ground_size: float = 2000.0
 
 var _loaded_chunks: Dictionary = {}
 var _bike: Node3D
@@ -186,7 +186,7 @@ func _create_safety_ground() -> void:
 
 	var shape_node := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(safety_ground_size, 2.0, safety_ground_size)
+	shape.size = Vector3(safety_ground_size, 12.0, safety_ground_size)
 	shape_node.shape = shape
 	_safety_ground.add_child(shape_node)
 
@@ -194,7 +194,7 @@ func _create_safety_ground() -> void:
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3(safety_ground_size, 0.5, safety_ground_size)
 	mesh_instance.mesh = mesh
-	mesh_instance.position = Vector3(0.0, -0.75, 0.0)
+	mesh_instance.position = Vector3(0.0, -5.5, 0.0)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.2, 0.22, 0.24, 1.0)
 	mat.roughness = 1.0
@@ -205,6 +205,6 @@ func _update_safety_ground_position() -> void:
 	if _safety_ground == null:
 		return
 	if _bike != null:
-		_safety_ground.global_position = Vector3(_bike.global_position.x, -3.0, _bike.global_position.z)
+		_safety_ground.global_position = Vector3(_bike.global_position.x, 0.0, _bike.global_position.z)
 	else:
-		_safety_ground.global_position = Vector3(0.0, -3.0, 0.0)
+		_safety_ground.global_position = Vector3(0.0, 0.0, 0.0)
