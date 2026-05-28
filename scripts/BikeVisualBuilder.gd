@@ -64,7 +64,7 @@ func _add_wheel(name: String, wheel_z: float, wheel_radius: float, tire_width: f
 	tire_mesh.outer_radius = wheel_radius
 	tire_mesh.inner_radius = max(0.02, wheel_radius - tire_width)
 	tire.mesh = tire_mesh
-	tire.rotation = Vector3(PI * 0.5, 0, 0)
+	tire.rotation = Vector3(0, 0, PI * 0.5)
 	tire.position = Vector3(0.0, wheel_radius, wheel_z)
 	tire.material_override = tire_mat
 	add_child(tire)
@@ -75,7 +75,7 @@ func _add_wheel(name: String, wheel_z: float, wheel_radius: float, tire_width: f
 	rim_mesh.outer_radius = wheel_radius - tire_width * 0.5
 	rim_mesh.inner_radius = rim_mesh.outer_radius - 0.03
 	rim.mesh = rim_mesh
-	rim.rotation = Vector3(PI * 0.5, 0, 0)
+	rim.rotation = Vector3(0, 0, PI * 0.5)
 	rim.position = Vector3(0.0, wheel_radius, wheel_z)
 	rim.material_override = rim_mat
 	add_child(rim)
