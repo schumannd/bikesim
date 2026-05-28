@@ -3,11 +3,11 @@ extends Node
 const BikeConfigResource := preload("res://resources/BikeConfig.gd")
 const CharacterConfigResource := preload("res://resources/CharacterConfig.gd")
 
-var bike_config: BikeConfig = BikeConfigResource.new()
-var character_config: CharacterConfig = CharacterConfigResource.new()
+var bike_config: Resource = BikeConfigResource.new()
+var character_config: Resource = CharacterConfigResource.new()
 
 func _ready() -> void:
-	var data := SaveSystem.load_game()
+	var data: Dictionary = SaveSystem.load_game()
 	if data.has("bike"):
 		bike_config.from_dict(data["bike"])
 	if data.has("character"):

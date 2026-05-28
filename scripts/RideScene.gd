@@ -33,7 +33,7 @@ func _process(_delta: float) -> void:
 		get_tree().root.get_node("Main").show_character_customization()
 
 func _physics_process(_delta: float) -> void:
-	var normalized_speed := clamp(abs((bike as Node).get("speed")) / 30.0, 0.0, 1.0)
+	var normalized_speed: float = clamp(abs((bike as Node).get("speed")) / 30.0, 0.0, 1.0)
 	engine_audio.pitch_scale = 0.75 + normalized_speed * 0.9
 	engine_audio.volume_db = lerp(-18.0, -4.0, normalized_speed)
 
@@ -79,9 +79,9 @@ func _complete_mission_step(required_step: int) -> void:
 	_update_mission_text()
 
 func _update_minimap_marker() -> void:
-	var world_pos := bike.global_position
-	var map_size := Vector2(120, 120)
+	var world_pos: Vector3 = bike.global_position
+	var map_size: Vector2 = Vector2(120, 120)
 	var world_extent := 100.0
-	var x := clamp((world_pos.x + world_extent) / (world_extent * 2.0), 0.0, 1.0)
-	var y := clamp((world_pos.z + world_extent) / (world_extent * 2.0), 0.0, 1.0)
+	var x: float = clamp((world_pos.x + world_extent) / (world_extent * 2.0), 0.0, 1.0)
+	var y: float = clamp((world_pos.z + world_extent) / (world_extent * 2.0), 0.0, 1.0)
 	minimap_marker.position = Vector2(x * map_size.x - 4.0, y * map_size.y - 4.0)

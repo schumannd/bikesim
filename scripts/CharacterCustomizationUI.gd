@@ -13,9 +13,11 @@ func _populate_options() -> void:
 	outfit_option.add_item("Casual")
 	outfit_option.add_item("Race")
 	outfit_option.add_item("Street")
+	outfit_option.select(0)
 	hair_option.add_item("Short")
 	hair_option.add_item("Long")
 	hair_option.add_item("Helmet")
+	hair_option.select(0)
 
 func _apply_state_to_ui() -> void:
 	skin_picker.color = GameState.character_config.skin_tone
@@ -29,10 +31,14 @@ func _on_save_pressed() -> void:
 	GameState.character_config.skin_tone = skin_picker.color
 	GameState.character_config.outfit_color = outfit_picker.color
 	GameState.persist()
-	get_tree().root.get_node("Main").show_ride_scene()
+	var main: Node = get_tree().current_scene
+	if main and main.has_method("show_ride_scene"):
+		main.show_ride_scene()
 
 func _on_cancel_pressed() -> void:
-	get_tree().root.get_node("Main").show_ride_scene()
+	var main: Node = get_tree().current_scene
+	if main and main.has_method("show_ride_scene"):
+		main.show_ride_scene()
 
 func _select_by_text(option: OptionButton, value: String) -> void:
 	for idx in range(option.item_count):

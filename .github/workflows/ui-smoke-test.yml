@@ -1,0 +1,25 @@
+name: UI Smoke Test
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  ui-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Godot
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+          wget -q https://github.com/godotengine/godot/releases/download/4.6-stable/Godot_v4.6-stable_linux.x86_64.zip
+          unzip -q Godot_v4.6-stable_linux.x86_64.zip
+          chmod +x Godot_v4.6-stable_linux.x86_64
+          sudo mv Godot_v4.6-stable_linux.x86_64 /usr/local/bin/godot
+
+      - name: Run UI smoke test
+        run: ./scripts/ci/run_ui_smoke_test.sh

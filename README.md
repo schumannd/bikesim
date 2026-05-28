@@ -44,6 +44,18 @@ PC-first 3D bicycle building and riding simulator prototype in Godot 4.
    - Linux: `build/linux/BikeSim.x86_64`
    - macOS: `build/macos/BikeSim.zip`
 
+## Automated UI Test Pipeline
+
+- Local smoke test:
+  - `./scripts/ci/run_ui_smoke_test.sh`
+- What it validates:
+  - Game launches through `Main.tscn`
+  - Initial ride screen is loaded
+  - Garage menu opens and returns to ride scene
+  - Character customization menu opens and returns to ride scene
+- CI:
+  - GitHub Actions workflow at `.github/workflows/ui-smoke-test.yml` runs the same smoke test on push and pull request.
+
 ## Next Expansion (Post-MVP)
 
 - Quest system and progression.
