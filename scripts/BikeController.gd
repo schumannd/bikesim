@@ -5,7 +5,9 @@ const BikeRigScript := preload("res://scripts/BikeRig.gd")
 @export var acceleration: float = 18.0
 @export var max_speed: float = 30.0
 @export var brake_power: float = 20.0
-@export var steering_speed: float = 1.6
+@export var steering_speed: float = 2.2
+@export var steer_gain_at_stop: float = 2.6
+@export var steer_gain_at_max_speed: float = 0.4
 @export var gravity: float = 18.0
 
 var speed: float = 0.0
@@ -23,7 +25,8 @@ func _physics_process(delta: float) -> void:
 		speed = move_toward(speed, 0.0, 6.0 * delta)
 	speed = move_toward(speed, 0.0, abs(speed) * 0.18 * delta)
 	speed = clamp(speed, -max_speed * 0.3, max_speed)
-	rotate_y(-steer * steering_speed * delta * (abs(speed) / max_speed + 0.25))
+	var steer_gain := _steer_gain_for_speed(speed)
+	rotate_y(-steer * steering_speed * steer_gain * delta)
 
 	var forward := -global_transform.basis.z
 	velocity.x = forward.x * speed
@@ -45,3 +48,9 @@ func _physics_process(delta: float) -> void:
 
 func set_reset_position(pos: Vector3) -> void:
 	reset_position = BikeRigScript.ride_spawn_position(pos)
+
+func _steer_gain_for_speed(current_speed: float) -> float:
+	var speed_ratio := clampf(abs(current_speed) / max_speed, 0.0, 1.0)
+	# Quadratic falloff: nimble U-turns when slow, stable arcs when fast.
+	var blend := speed_ratio * speed_ratio
+	return lerpf(steer_gain_at_stop, steer_gain_at_max_speed, blend)
