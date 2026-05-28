@@ -12,6 +12,10 @@
 - `G`: open garage
 - `C`: open character customization
 
+## World
+
+The open city includes procedural sidewalks, road markings, street furniture (trees, lamps, benches, signs), lit building windows, and NPCs that **stand**, **walk**, or **ride bikes** along paths near the player.
+
 ## Main Menu
 
 On launch you get a main menu with:

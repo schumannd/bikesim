@@ -239,6 +239,26 @@ func animate_pedaling(phase: float, intensity: float) -> void:
 	_set_node_rot_x("ForearmL", sin(phase + PI) * 0.12 * pedal)
 	_set_node_rot_x("ForearmR", sin(phase) * 0.12 * pedal)
 
+func animate_walk(phase: float, intensity: float) -> void:
+	var stride: float = clampf(intensity, 0.0, 1.0)
+	_set_node_rot_x("ThighL", sin(phase) * 0.55 * stride)
+	_set_node_rot_x("ThighR", sin(phase + PI) * 0.55 * stride)
+	_set_node_rot_x("CalfL", maxf(0.0, sin(phase + PI * 0.5)) * 0.35 * stride)
+	_set_node_rot_x("CalfR", maxf(0.0, sin(phase + PI * 1.5)) * 0.35 * stride)
+	_set_node_rot_x("UpperArmL", sin(phase + PI) * 0.42 * stride)
+	_set_node_rot_x("UpperArmR", sin(phase) * 0.42 * stride)
+	_set_node_rot_x("ForearmL", 0.18 * stride)
+	_set_node_rot_x("ForearmR", 0.18 * stride)
+
+func animate_idle(phase: float) -> void:
+	var sway: float = sin(phase * 1.2) * 0.04
+	_set_node_rot_x("UpperArmL", sway)
+	_set_node_rot_x("UpperArmR", -sway)
+	_set_node_rot_x("ForearmL", sway * 0.5)
+	_set_node_rot_x("ForearmR", -sway * 0.5)
+	_set_node_rot_x("ThighL", sin(phase * 0.8) * 0.02)
+	_set_node_rot_x("ThighR", sin(phase * 0.8 + PI) * 0.02)
+
 func _cache_base_rotations() -> void:
 	_base_rotations.clear()
 	_store_pivot_rotations(self)

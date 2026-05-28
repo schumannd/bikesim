@@ -16,6 +16,8 @@ const TERRAIN_THICKNESS := 0.5
 const ROAD_TOP_Y := 0.0
 const ROAD_THICKNESS := 0.15
 const ROAD_WIDTH := 16.0
+const WorldPropBuilderScript := preload("res://scripts/WorldPropBuilder.gd")
+const WorldNPCScript := preload("res://scripts/WorldNPC.gd")
 
 var _loaded_chunks: Dictionary = {}
 var _bike: Node3D
@@ -28,7 +30,7 @@ func _ready() -> void:
 	_clear_legacy_static_layout()
 	_setup_global_terrain_visual()
 	if not _loaded_chunks.has("0:0"):
-		_create_chunk(Vector2i.ZERO, "0:0")
+		_create_chunk(Vector2i.ZERO, "0:0", Vector2i.ZERO)
 	_refresh_chunks(true)
 
 func _process(_delta: float) -> void:
@@ -47,7 +49,7 @@ func _refresh_chunks(force: bool) -> void:
 			var key: String = "%d:%d" % [x, z]
 			target_keys[key] = true
 			if force or not _loaded_chunks.has(key):
-				_create_chunk(Vector2i(x, z), key)
+				_create_chunk(Vector2i(x, z), key, center_chunk)
 
 	for key: String in _loaded_chunks.keys():
 		if not target_keys.has(key):
@@ -58,18 +60,23 @@ func _refresh_chunks(force: bool) -> void:
 func _world_to_chunk(pos: Vector3) -> Vector2i:
 	return Vector2i(int(floor(pos.x / chunk_size)), int(floor(pos.z / chunk_size)))
 
-func _create_chunk(chunk_coord: Vector2i, key: String) -> void:
+func _create_chunk(chunk_coord: Vector2i, key: String, center_chunk: Vector2i) -> void:
 	var chunk_node := Node3D.new()
 	chunk_node.name = "Chunk_%s" % key.replace(":", "_")
 	chunk_node.position = Vector3(chunk_coord.x * chunk_size, 0.0, chunk_coord.y * chunk_size)
 	add_child(chunk_node)
 	_loaded_chunks[key] = chunk_node
 
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _chunk_seed(chunk_coord)
+
 	_add_ground(chunk_node)
 	_add_roads(chunk_node)
 	if chunk_coord == Vector2i.ZERO:
 		_add_garage(chunk_node)
-	_add_city_blocks(chunk_node, chunk_coord)
+	_add_city_blocks(chunk_node, chunk_coord, rng)
+	WorldPropBuilderScript.populate_chunk(chunk_node, rng, chunk_coord)
+	_add_chunk_npcs(chunk_node, chunk_coord, center_chunk, rng)
 
 func _setup_global_terrain_visual() -> void:
 	if _terrain_visual != null:
@@ -164,10 +171,53 @@ func _add_road_segment(road_body: StaticBody3D, pos: Vector3, size: Vector3) -> 
 	road_shape.position = pos
 	road_body.add_child(road_shape)
 
-func _add_city_blocks(parent: Node3D, chunk_coord: Vector2i) -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = _chunk_seed(chunk_coord)
+func _add_chunk_npcs(parent: Node3D, chunk_coord: Vector2i, center_chunk: Vector2i, rng: RandomNumberGenerator) -> void:
+	var dist: int = maxi(absi(chunk_coord.x - center_chunk.x), absi(chunk_coord.y - center_chunk.y))
+	if dist > 3:
+		return
 
+	var npc_count := 1 if dist > 2 else rng.randi_range(2, 4)
+	var npc_root := Node3D.new()
+	npc_root.name = "NPCs"
+	parent.add_child(npc_root)
+
+	for i in npc_count:
+		var spawn := _pick_npc_spawn(rng, chunk_coord)
+		if spawn == Vector3.INF:
+			continue
+		var npc := Node3D.new()
+		npc.name = "NPC_%d" % i
+		npc.set_script(WorldNPCScript)
+		npc_root.add_child(npc)
+		npc.call("setup_from_rng", rng, spawn)
+
+func _pick_npc_spawn(rng: RandomNumberGenerator, chunk_coord: Vector2i) -> Vector3:
+	for _attempt in 12:
+		var on_road := behavior_roll_road(rng)
+		var pos: Vector3
+		if on_road:
+			var along_x := rng.randf() > 0.5
+			if along_x:
+				pos = Vector3(rng.randf_range(-48.0, 48.0), ROAD_TOP_Y, rng.randf_range(-4.0, 4.0))
+			else:
+				pos = Vector3(rng.randf_range(-4.0, 4.0), ROAD_TOP_Y, rng.randf_range(-48.0, 48.0))
+		else:
+			var side_x := rng.randf() > 0.5
+			if side_x:
+				var side := -1.0 if rng.randf() > 0.5 else 1.0
+				pos = Vector3(side * rng.randf_range(18.0, 42.0), ROAD_TOP_Y, rng.randf_range(-48.0, 48.0))
+			else:
+				var side := -1.0 if rng.randf() > 0.5 else 1.0
+				pos = Vector3(rng.randf_range(-48.0, 48.0), ROAD_TOP_Y, side * rng.randf_range(18.0, 42.0))
+		if chunk_coord == Vector2i.ZERO and pos.distance_to(Vector3(-18.0, 0.0, -16.0)) < 20.0:
+			continue
+		return pos
+	return Vector3.INF
+
+func behavior_roll_road(rng: RandomNumberGenerator) -> bool:
+	return rng.randf() < 0.38
+
+func _add_city_blocks(parent: Node3D, chunk_coord: Vector2i, rng: RandomNumberGenerator) -> void:
 	var slots := [
 		Vector3(-36.0, 0.0, -36.0),
 		Vector3(36.0, 0.0, -36.0),
@@ -206,6 +256,7 @@ func _add_city_blocks(parent: Node3D, chunk_coord: Vector2i) -> void:
 		mat.roughness = 0.9
 		building_mesh.material_override = mat
 		building.add_child(building_mesh)
+		WorldPropBuilderScript.add_building_windows(building, mesh.size, rng)
 		parent.add_child(building)
 
 func _overlaps_garage_lot(building_pos: Vector3, building_size: Vector3) -> bool:
