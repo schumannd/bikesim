@@ -6,7 +6,7 @@ extends Control
 @onready var mission_label: Label = $HUD/MarginContainer/VBoxContainer/MissionLabel
 @onready var checkpoint_label: Label = $HUD/MarginContainer/VBoxContainer/CheckpointLabel
 @onready var minimap_marker: ColorRect = $HUD/MinimapPanel/Marker
-@onready var rider_mesh: MeshInstance3D = $SubViewportContainer/SubViewport/World/Bike/RiderMesh
+@onready var rider_visual: Node3D = $SubViewportContainer/SubViewport/World/Bike/RiderVisual
 @onready var bike_visual: Node3D = $SubViewportContainer/SubViewport/World/Bike/BikeVisual
 @onready var checkpoint: Area3D = $SubViewportContainer/SubViewport/World/CheckpointA
 @onready var engine_audio: AudioStreamPlayer3D = $SubViewportContainer/SubViewport/World/Bike/EngineAudio
@@ -39,22 +39,8 @@ func _physics_process(_delta: float) -> void:
 	engine_audio.volume_db = lerp(-18.0, -4.0, normalized_speed)
 
 func _apply_visuals() -> void:
-	var bike_material: StandardMaterial3D = StandardMaterial3D.new()
-	bike_material.albedo_color = GameState.bike_config.paint_color
-	for child: Node in bike_visual.get_children():
-		if child is MeshInstance3D:
-			(child as MeshInstance3D).material_override = bike_material
-	match GameState.bike_config.frame_id:
-		"bmx":
-			bike_visual.scale = Vector3(0.86, 0.86, 0.86)
-		"road":
-			bike_visual.scale = Vector3(1.05, 0.92, 1.08)
-		_:
-			bike_visual.scale = Vector3.ONE
-
-	var rider_material := StandardMaterial3D.new()
-	rider_material.albedo_color = GameState.character_config.outfit_color
-	rider_mesh.material_override = rider_material
+	bike_visual.call("apply_config", GameState.bike_config)
+	rider_visual.call("apply_config", GameState.character_config)
 
 func _on_checkpoint_body_entered(body: Node3D) -> void:
 	if body == bike:
@@ -83,7 +69,8 @@ func _complete_mission_step(required_step: int) -> void:
 func _update_minimap_marker() -> void:
 	var world_pos: Vector3 = bike.global_position
 	var map_size: Vector2 = Vector2(120, 120)
-	var world_extent := 100.0
-	var x: float = clamp((world_pos.x + world_extent) / (world_extent * 2.0), 0.0, 1.0)
-	var y: float = clamp((world_pos.z + world_extent) / (world_extent * 2.0), 0.0, 1.0)
+	var local_x: float = fposmod(world_pos.x, 120.0) / 120.0
+	var local_y: float = fposmod(world_pos.z, 120.0) / 120.0
+	var x: float = clamp(local_x, 0.0, 1.0)
+	var y: float = clamp(local_y, 0.0, 1.0)
 	minimap_marker.position = Vector2(x * map_size.x - 4.0, y * map_size.y - 4.0)

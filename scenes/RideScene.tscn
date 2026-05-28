@@ -3,6 +3,9 @@
 [ext_resource type="Script" path="res://scripts/RideScene.gd" id="1_ride"]
 [ext_resource type="Script" path="res://scripts/BikeController.gd" id="2_bike"]
 [ext_resource type="Script" path="res://scripts/CameraFollow.gd" id="3_cam"]
+[ext_resource type="Script" path="res://scripts/ProceduralCity.gd" id="4_city"]
+[ext_resource type="Script" path="res://scripts/BikeVisualBuilder.gd" id="5_bikevisual"]
+[ext_resource type="Script" path="res://scripts/RiderVisualBuilder.gd" id="6_ridervisual"]
 
 [sub_resource type="BoxMesh" id="1_groundmesh"]
 size = Vector3(200, 1, 200)
@@ -96,6 +99,8 @@ size = Vector2i(1600, 900)
 handle_input_locally = false
 
 [node name="World" type="Node3D" parent="SubViewportContainer/SubViewport"]
+script = ExtResource("4_city")
+bike_path = NodePath("Bike")
 
 [node name="Sun" type="DirectionalLight3D" parent="SubViewportContainer/SubViewport/World"]
 rotation = Vector3(-0.785398, 0, 0)
@@ -185,6 +190,7 @@ script = ExtResource("2_bike")
 shape = SubResource("4_bikeshape")
 
 [node name="BikeVisual" type="Node3D" parent="SubViewportContainer/SubViewport/World/Bike"]
+script = ExtResource("5_bikevisual")
 
 [node name="FrameTop" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Bike/BikeVisual"]
 position = Vector3(0, 0.75, -0.08)
@@ -220,9 +226,8 @@ position = Vector3(0, 0.34, 0.78)
 rotation = Vector3(1.5708, 0, 0)
 mesh = SubResource("13_wheelmesh")
 
-[node name="RiderMesh" type="MeshInstance3D" parent="SubViewportContainer/SubViewport/World/Bike"]
-position = Vector3(0, 1.1, 0.2)
-mesh = SubResource("5_ridermesh")
+[node name="RiderVisual" type="Node3D" parent="SubViewportContainer/SubViewport/World/Bike"]
+script = ExtResource("6_ridervisual")
 
 [node name="EngineAudio" type="AudioStreamPlayer3D" parent="SubViewportContainer/SubViewport/World/Bike"]
 stream = SubResource("10_enginehum")

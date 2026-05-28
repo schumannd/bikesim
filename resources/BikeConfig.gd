@@ -1,9 +1,9 @@
 extends Resource
 class_name BikeConfig
 
-@export var frame_id: String = "street"
-@export var wheel_id: String = "sport"
-@export var handlebar_id: String = "flat"
+@export var frame_id: String = "trail"
+@export var wheel_id: String = "mtb_29"
+@export var handlebar_id: String = "riser"
 @export var paint_color: Color = Color(0.1, 0.5, 0.9, 1.0)
 
 func to_dict() -> Dictionary:
