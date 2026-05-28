@@ -1,11 +1,11 @@
 # BikeSim
 
-Godot 4 prototype: build bikes, ride an open city, complete quests. Gameplay and controls are documented in [GAME.md](GAME.md).
+Godot 4 prototype: build bikes, ride an open city, complete quests. For controls, quests, and world details see [GAME.md](GAME.md).
 
 ## Requirements
 
 - [Godot 4.x](https://godotengine.org/) (4.6+ used in CI)
-- Export templates (only for desktop builds)
+- Export templates (desktop builds only)
 
 ## Run locally
 
@@ -14,7 +14,7 @@ Godot 4 prototype: build bikes, ride an open city, complete quests. Gameplay and
 3. Main scene is `res://scenes/Main.tscn` (set in `project.godot`).
 4. Press **Play** (F5).
 
-From the terminal (with `godot` on your `PATH`):
+With `godot` on your `PATH`:
 
 ```bash
 godot --path . res://scenes/Main.tscn
@@ -24,12 +24,12 @@ godot --path . res://scenes/Main.tscn
 
 | Path | Purpose |
 |------|---------|
-| `scenes/` | Main scenes (`Main`, menus, ride, garage, character editor) |
-| `scripts/` | Gameplay and UI |
+| `scenes/` | Main scenes (`Main`, menus, ride, garage, character editor, interiors) |
+| `scripts/` | Gameplay, UI, procedural world |
 | `systems/` | Autoloads (`GameState`, `SaveSystem`, `Settings`, `BackgroundMusic`, `SoundEffects`) |
 | `resources/` | Config resources (`BikeConfig`, `CharacterConfig`) |
-| `tasks/` | One markdown file per bug/feature; completed work in `tasks/done/` |
 | `export_presets.cfg` | Desktop export presets |
+| `scripts/ci/` | Headless UI smoke test |
 
 ## Export (desktop)
 
@@ -56,7 +56,6 @@ Covers: main menu → new game → character editor → ride → garage → char
 
 ## Contributing
 
-1. Track work in `tasks/` — one file per item; move finished items to `tasks/done/`.
-2. Run `./scripts/ci/run_ui_smoke_test.sh` before opening a PR.
-3. Keep changes focused; match existing code style in nearby files.
-4. Agents: see [AGENTS.md](AGENTS.md) for commit and push expectations.
+1. Run `./scripts/ci/run_ui_smoke_test.sh` before opening a PR.
+2. Keep changes focused; match style in nearby files.
+3. Automated agents: see [AGENTS.md](AGENTS.md).
